@@ -12,11 +12,11 @@ export default defineConfig({
     permissions: ['tabs'],
     host_permissions: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
     icons: {
-      '16': 'icon/16.ico',
-      '32': 'icon/32.ico',
-      '48': 'icon/48.ico',
-      '96': 'icon/96.ico',
-      '128': 'icon/128.ico',
+      '16': 'icon/16.png',
+      '32': 'icon/32.png',
+      '48': 'icon/48.png',
+      '96': 'icon/96.png',
+      '128': 'icon/128.png',
     },
     action: {
       default_title: 'SoundCloud Control',
@@ -44,8 +44,11 @@ export default defineConfig({
     },
     browser_specific_settings: {
       gecko: {
-        id: '{ecd8bf54-1dea-4415-9b5e-c9452d1255fe}',
+        id: '{65009ef0-e104-4198-b842-f828ad527a1a}',
         strict_min_version: '109.0',
+        data_collection_permissions: {
+          required: ['none'],
+        },
       },
     },
   },
