@@ -122,9 +122,9 @@ function AplicacionPopup() {
   }
 
   return (
-    <main className="relative w-78">
-      <section className="fondo-tarjeta sombra-tarjeta relative overflow-hidden rounded-[22px] border border-white/10">
-        <div className="h-1.25 w-full bg-[linear-gradient(90deg,#ff5500_0%,#ff7700_62%,#ffd08a_100%)]" />
+    <main className="relative w-full">
+      <section className="fondo-tarjeta relative overflow-hidden">
+        <div className="h-full w-full bg-[linear-gradient(90deg,#ff5500_0%,#ff7700_62%,#ffd08a_100%)]" />
         <FondoPortada portada={portada} descripcion={descripcionPortada(cancion)} />
 
         <div className="relative z-10 flex min-h-97.75 flex-col gap-4 px-4 pb-4 pt-4.5">

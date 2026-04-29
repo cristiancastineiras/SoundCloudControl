@@ -67,12 +67,30 @@ export default defineContentScript({
   matches: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
   runAt: 'document_end',
   main() {
-    browser.runtime.onMessage.addListener((mensaje) => {
+    console.log('[CS] content script cargado en:', location.href);
+
+    if ((window as any).__scControlLoaded) {
+      console.log('[CS] ya cargado, ignorando registro duplicado');
+      return;
+    }
+    (window as any).__scControlLoaded = true;
+
+    browser.runtime.onMessage.addListener((mensaje, remitente, enviarRespuesta) => {
+      console.log('[CS] mensaje recibido:', mensaje, '| remitente:', remitente);
+
       if (!esSolicitudContenido(mensaje)) {
-        return undefined;
+        console.log('[CS] mensaje descartado (no es SolicitudContenido)');
+        return;
       }
 
-      return gestionarSolicitud(mensaje);
+      void gestionarSolicitud(mensaje).then((resultado) => {
+        console.log('[CS] resultado gestionarSolicitud:', resultado);
+        enviarRespuesta(resultado);
+      }).catch((err: unknown) => {
+        console.error('[CS] error en gestionarSolicitud:', err);
+        enviarRespuesta(null);
+      });
+      return true;
     });
   },
 });
@@ -131,7 +149,14 @@ function obtenerEstadoActual(): EstadoCancion | null {
   const enlaceArtista = buscarElemento<HTMLAnchorElement>(SELECTORES.enlaceArtista);
   const enlaceCancion = buscarElemento<HTMLAnchorElement>(SELECTORES.enlaceCancion);
 
+  console.log('[CS] obtenerEstadoActual →',
+    'botonReproduccion:', botonReproduccion?.className ?? 'NO ENCONTRADO',
+    '| enlaceCancion:', enlaceCancion?.href ?? 'NO ENCONTRADO',
+    '| enlaceArtista:', enlaceArtista?.href ?? 'NO ENCONTRADO',
+  );
+
   if (!botonReproduccion || !enlaceCancion) {
+    console.warn('[CS] reproductor no encontrado → devolviendo null');
     return null;
   }
 
