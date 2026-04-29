@@ -9,7 +9,7 @@ export default defineConfig({
   manifest: {
     name: 'SoundCloud Control',
     description: 'Controla la reproducción de SoundCloud sin cambiar de pestaña.',
-    permissions: ['tabs'],
+    permissions: ['tabs', 'scripting'],
     host_permissions: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
     icons: {
       '16': 'icon/16.png',
