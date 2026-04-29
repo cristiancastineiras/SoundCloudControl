@@ -1,8 +1,17 @@
 # SoundCloud Control
+[![icono](./public/icon/128.png)](./public/icon/128.png)
+
 
 Extensión de navegador creada con WXT para controlar SoundCloud sin cambiar de pestaña.
 
-[![Captura del popup](./assets/image.png)](./assets/image.png)
+<div align="center">
+
+| Firefox | Chrome |
+|:-------:|:------:|
+| [![Firefox](./assets/firefox.png)](./assets/firefox.png) | [![Chrome](./assets/chrome.png)](./assets/chrome.png) |
+
+</div>
+
 
 ## Resumen
 
