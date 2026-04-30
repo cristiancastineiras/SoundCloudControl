@@ -1,4 +1,5 @@
 import type { EstadoCancion, RespuestaPopup } from '../../../lib/contratos';
+import type { Textos } from '../i18n';
 import { mensajeSecundario, unirClases } from '../utilidades';
 
 const CLASES_META =
@@ -8,9 +9,10 @@ export function BloqueCancion(props: {
   cancion: EstadoCancion | null;
   respuesta: RespuestaPopup;
   bloqueado: boolean;
+  t: Textos;
   onAbrirEnlace: (url: string | null) => Promise<void> | void;
 }) {
-  const { bloqueado, cancion, onAbrirEnlace, respuesta } = props;
+  const { bloqueado, cancion, onAbrirEnlace, respuesta, t } = props;
 
   return (
     <section className="flex flex-1 flex-col justify-end gap-2">
@@ -24,7 +26,7 @@ export function BloqueCancion(props: {
           void onAbrirEnlace(cancion?.urlArtista ?? null);
         }}
         disabled={!cancion?.urlArtista || bloqueado}
-        title={cancion?.artista ?? 'Sin artista disponible'}>
+        title={cancion?.artista ?? t.sinArtista}>
         {cancion?.artista ?? 'SoundCloud'}
       </button>
 
