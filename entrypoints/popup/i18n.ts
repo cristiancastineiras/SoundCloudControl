@@ -83,6 +83,12 @@ export const TEXTOS = {
     tema: 'Tema de color',
     temaNaranja: 'Naranja (por defecto)',
     guardado: 'Guardado',
+
+    // descarga
+    descargarMp3: 'Descargar MP3',
+    descargando: 'Descargando…',
+    descargaOk: '¡Descarga iniciada!',
+    descargaError: 'Error al descargar',
   },
   en: {
     appNombre: 'SoundCloud Control',
@@ -139,6 +145,12 @@ export const TEXTOS = {
     tema: 'Color theme',
     temaNaranja: 'Orange (default)',
     guardado: 'Saved',
+
+    // download
+    descargarMp3: 'Download MP3',
+    descargando: 'Downloading…',
+    descargaOk: 'Download started!',
+    descargaError: 'Download failed',
   },
 } satisfies Record<Idioma, object>;
 

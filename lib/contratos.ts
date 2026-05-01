@@ -96,7 +96,19 @@ export type SolicitudPopup =
       destino: 'background';
       tipo: 'ajustar-volumen';
       volumen: number;
+    }
+  | {
+      canal: 'soundcloud-control';
+      destino: 'background';
+      tipo: 'descargar-cancion';
+      urlCancion: string;
     };
+
+export interface RespuestaDescarga {
+  tipo: 'descarga';
+  exito: boolean;
+  mensaje: string;
+}
 
 export type SolicitudContenido =
   | {

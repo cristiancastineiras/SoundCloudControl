@@ -2,7 +2,7 @@
   "name": "soundcloud-control-wxt",
   "description": "Extension para controlar SoundCloud sin cambiar de pestana",
   "private": true,
-  "version": "0.7.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -18,6 +18,8 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/manrope": "^5.2.8",
     "@phosphor-icons/react": "^2.1.10",
+    "btch-downloader": "^6.0.27",
+    "btch-http": "^2.0.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

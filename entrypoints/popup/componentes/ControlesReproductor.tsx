@@ -9,13 +9,17 @@ import { unirClases } from '../utilidades';
 import { BotonControl } from './BotonControl';
 import { IconoControl } from './IconoControl';
 
+type EstadoDescarga = null | 'descargando' | 'ok' | 'error';
+
 export function ControlesReproductor(props: {
   cancion: EstadoCancion;
   bloqueado: boolean;
   t: Textos;
+  estadoDescarga: EstadoDescarga;
   onEjecutarAccion: (accion: AccionReproductor) => Promise<void> | void;
+  onDescargar: () => Promise<void> | void;
 }) {
-  const { bloqueado, cancion, onEjecutarAccion, t } = props;
+  const { bloqueado, cancion, estadoDescarga, onDescargar, onEjecutarAccion, t } = props;
   const aleatorioActivo = cancion.aleatorioActivo;
   const repeticionListaActiva = cancion.modoRepeticion === MODOS_REPETICION.lista;
   const repeticionPistaActiva = cancion.modoRepeticion === MODOS_REPETICION.pista;
@@ -50,6 +54,23 @@ export function ControlesReproductor(props: {
         ? 'text-[#ffe2c3]'
         : 'bg-black/72 text-marfil/78',
     );
+  const textoDescarga =
+    estadoDescarga === 'descargando'
+      ? t.descargando
+      : estadoDescarga === 'ok'
+        ? t.descargaOk
+        : estadoDescarga === 'error'
+          ? t.descargaError
+          : t.descargarMp3;
+  const clasesBotonDescarga = unirClases(
+    'inline-flex h-11 w-full items-center justify-center gap-2 rounded-[16px] border text-sm font-semibold tracking-[0.01em] transition duration-150 ease-out',
+    'disabled:cursor-wait disabled:opacity-70',
+    estadoDescarga === 'ok'
+      ? 'border-emerald-300/50 bg-emerald-400/15 text-emerald-100'
+      : estadoDescarga === 'error'
+        ? 'border-red-400/55 bg-red-500/12 text-red-100'
+        : 'border-white/15 bg-black/75 text-marfil hover:-translate-y-px hover:border-[#ffc28c]/60',
+  );
 
   return (
     <section className="flex flex-col gap-2">
@@ -175,7 +196,26 @@ export function ControlesReproductor(props: {
             weight={cancion.silenciado ? 'fill' : 'regular'}
           />
         </button>
+
       </div>
+
+      <button
+        type="button"
+        className={clasesBotonDescarga}
+        onClick={() => {
+          void onDescargar();
+        }}
+        disabled={bloqueado || estadoDescarga === 'descargando'}
+        aria-busy={estadoDescarga === 'descargando'}
+        aria-live="polite"
+        aria-label={textoDescarga}>
+        <IconoControl
+          nombre={estadoDescarga === 'descargando' ? 'recargar' : 'descargar'}
+          weight={estadoDescarga === 'descargando' ? 'regular' : estadoDescarga === 'ok' ? 'fill' : 'regular'}
+          className={estadoDescarga === 'descargando' ? 'animate-spin' : undefined}
+        />
+        <span>{textoDescarga}</span>
+      </button>
     </section>
   );
 }

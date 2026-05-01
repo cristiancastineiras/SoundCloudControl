@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import {
   type AccionReproductor,
+  type RespuestaDescarga,
   type RespuestaPopup,
   type SolicitudPopup,
 } from '../../lib/contratos';
@@ -92,6 +93,7 @@ function rgbaDesdeRgb(rgb: Rgb, alpha: number): string {
 
 type Vista = 'principal' | 'ajustes';
 type AccionInterfaz = AccionReproductor | 'abrir-soundcloud' | 'abrir-enlace';
+type EstadoDescarga = null | 'descargando' | 'ok' | 'error';
 
 function AplicacionPopup() {
   const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
@@ -103,6 +105,7 @@ function AplicacionPopup() {
     mensaje: TEXTOS[obtenerIdioma()].cargando,
   }));
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
+  const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
 
   const t = TEXTOS[idioma];
 
@@ -204,6 +207,24 @@ function AplicacionPopup() {
     }
   }
 
+  async function descargarCancion() {
+    if (!cancion?.urlCancion) return;
+    setEstadoDescarga('descargando');
+    try {
+      const resultado = await enviarMensajeDescarga({
+        canal: 'soundcloud-control',
+        destino: 'background',
+        tipo: 'descargar-cancion',
+        urlCancion: cancion.urlCancion,
+      });
+      setEstadoDescarga(resultado.exito ? 'ok' : 'error');
+    } catch {
+      setEstadoDescarga('error');
+    } finally {
+      setTimeout(() => setEstadoDescarga(null), 3000);
+    }
+  }
+
   function cambiarIdioma(nuevoIdioma: Idioma) {
     guardarIdioma(nuevoIdioma);
     setIdioma(nuevoIdioma);
@@ -251,7 +272,9 @@ function AplicacionPopup() {
                 cancion={cancion}
                 bloqueado={controlesBloqueados}
                 t={t}
+                estadoDescarga={estadoDescarga}
                 onEjecutarAccion={ejecutarAccion}
+                onDescargar={descargarCancion}
               />
             ) : (
               <AccionesEstado
@@ -272,6 +295,10 @@ function AplicacionPopup() {
 
 async function enviarMensaje(mensaje: SolicitudPopup) {
   return (await browser.runtime.sendMessage(mensaje)) as RespuestaPopup;
+}
+
+async function enviarMensajeDescarga(mensaje: SolicitudPopup & { tipo: 'descargar-cancion' }) {
+  return (await browser.runtime.sendMessage(mensaje)) as RespuestaDescarga;
 }
 
 export default AplicacionPopup;
