@@ -1,6 +1,7 @@
 import {
   ArrowClockwise,
   ArrowSquareOut,
+  DownloadSimple,
   HeartStraight,
   Pause,
   Play,
@@ -28,6 +29,7 @@ const ICONOS_CONTROL = {
   volumenMute: SpeakerSimpleSlash,
   abrir: ArrowSquareOut,
   recargar: ArrowClockwise,
+  descargar: DownloadSimple,
 } as const;
 
 export type NombreIcono = keyof typeof ICONOS_CONTROL;
