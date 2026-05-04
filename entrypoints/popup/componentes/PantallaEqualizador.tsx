@@ -98,7 +98,8 @@ export function PantallaEqualizador(props: {
 
       <p id={ayudaId} className="sr-only">{t.volverConEscape}</p>
 
-      <div className="rounded-2xl border border-white/8 bg-black/28 px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      {/* SOLO DEV NO PRO */}
+      {/* <div className="rounded-2xl border border-white/8 bg-black/28 px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <div className="mb-2 flex items-center gap-2 text-[0.76rem] font-semibold text-marfil/90">
           <SlidersHorizontal size={14} weight="bold" className="shrink-0" />
           <span>{respuesta.mensaje}</span>
@@ -110,7 +111,7 @@ export function PantallaEqualizador(props: {
           <ChipEstado activa={estado.procesando}>{estado.procesando ? t.eqProcesando : t.eqEnEspera}</ChipEstado>
           <ChipEstado>{etiquetaContexto(estado.estadoContexto, t)}</ChipEstado>
         </div>
-      </div>
+      </div> */}
 
       <section className="flex flex-col gap-2" aria-labelledby={presetsId}>
         <h3 id={presetsId} className="m-0 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-marfil/40">
