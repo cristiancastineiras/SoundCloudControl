@@ -1,23 +1,94 @@
 import {
   ACCIONES_POR_COMANDO,
+  crearRespuestaEqualizador,
   crearRespuestaPopup,
   PATRONES_SOUNDCLOUD,
   URL_BASE_SOUNDCLOUD,
   esComandoRapido,
-  esSolicitudPopup,
+  esSolicitudBackground,
   type AccionReproductor,
   type EstadoCancion,
+  type RespuestaEqualizador,
   type RespuestaDescarga,
   type RespuestaPopup,
+  type SolicitudBackground,
   type SolicitudContenido,
   type SolicitudPopup,
 } from '../lib/contratos';
+import {
+  crearEstadoEqualizador,
+  normalizarAjustesEqualizador,
+  type AjustesEqualizador,
+  type EstadoEqualizador,
+} from '../lib/equalizer';
 
 const TIEMPO_ESPERA_PESTANA_MS = 12_000;
+const CLAVE_STORAGE_EQUALIZADOR = 'soundcloud-control.equalizer';
+const PREFIJO_LOG_EQ = '[EQ][BG]';
+const ARCHIVO_CONTENT_SCRIPT = '/content-scripts/content.js';
+const ARCHIVO_CONTENT_SCRIPT_MAIN = '/equalizer-main.js';
 type PestanaSoundCloud = Browser.tabs.Tab;
+type RespuestaBackground =
+  | AjustesEqualizador
+  | RespuestaPopup
+  | RespuestaDescarga
+  | RespuestaEqualizador;
+
+function resumirAjustesEqualizador(ajustes: AjustesEqualizador) {
+  return {
+    habilitado: ajustes.habilitado,
+    presetId: ajustes.presetId,
+    preamp: ajustes.preamp,
+    bandasActivas: Object.entries(ajustes.bandas)
+      .filter(([, ganancia]) => ganancia !== 0)
+      .map(([id, ganancia]) => `${id}:${ganancia}`),
+  };
+}
+
+function crearRespuestaErrorBackground(
+  solicitud: SolicitudBackground,
+): RespuestaBackground {
+  switch (solicitud.tipo) {
+    case 'obtener-configuracion-equalizador':
+      return normalizarAjustesEqualizador(undefined);
+    case 'obtener-equalizador':
+      return crearRespuestaEqualizador(
+        'error',
+        undefined,
+        'No se ha podido consultar el equalizador de SoundCloud.',
+      );
+    case 'guardar-equalizador':
+      return crearRespuestaEqualizador(
+        'error',
+        solicitud.ajustes,
+        'No se ha podido guardar el equalizador de SoundCloud.',
+      );
+    case 'descargar-cancion':
+      return {
+        tipo: 'descarga',
+        exito: false,
+        mensaje: 'No se ha podido completar la descarga solicitada.',
+      };
+    default:
+      return crearRespuestaPopup(
+        'error',
+        null,
+        'No se ha podido completar la solicitud en segundo plano.',
+      );
+  }
+}
 
 export default defineBackground(() => {
   console.log('[BG] background arrancado');
+  void inyectarEnTabsExistentes();
+
+  browser.tabs.onUpdated.addListener((tabId, informacion, pestana) => {
+    if (informacion.status !== 'complete' || !esUrlSoundCloud(pestana.url)) {
+      return;
+    }
+
+    void inyectarContentScript(tabId);
+  });
 
   browser.runtime.onInstalled.addListener(() => {
     console.log('[BG] onInstalled → inyectando content script en tabs SC ya abiertas');
@@ -35,16 +106,17 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((mensaje, remitente, enviarRespuesta) => {
     console.log('[BG] mensaje recibido:', mensaje, '| remitente:', remitente);
-    if (!esSolicitudPopup(mensaje)) {
-      console.log('[BG] mensaje descartado (no es SolicitudPopup)');
+    if (!esSolicitudBackground(mensaje)) {
+      console.log('[BG] mensaje descartado (no es SolicitudBackground)');
       return;
     }
 
-    void gestionarSolicitudPopup(mensaje).then((respuesta) => {
+    void gestionarSolicitudBackground(mensaje).then((respuesta) => {
       console.log('[BG] respuesta para popup:', respuesta);
       enviarRespuesta(respuesta);
     }).catch((err: unknown) => {
-      console.error('[BG] error gestionando solicitud popup:', err);
+      console.error('[BG] error gestionando solicitud background:', err);
+      enviarRespuesta(crearRespuestaErrorBackground(mensaje));
     });
     return true;
   });
@@ -71,10 +143,16 @@ async function ejecutarComandoRapido(comando: keyof typeof ACCIONES_POR_COMANDO)
   }
 }
 
-async function gestionarSolicitudPopup(
-  solicitud: SolicitudPopup,
-): Promise<RespuestaPopup | RespuestaDescarga> {
+async function gestionarSolicitudBackground(
+  solicitud: SolicitudBackground,
+): Promise<RespuestaBackground> {
   switch (solicitud.tipo) {
+    case 'obtener-configuracion-equalizador':
+      return leerAjustesEqualizador();
+    case 'obtener-equalizador':
+      return obtenerEstadoEqualizador();
+    case 'guardar-equalizador':
+      return guardarEqualizadorDesdePopup(solicitud.ajustes);
     case 'obtener-estado':
       return obtenerEstadoActual();
     case 'ejecutar-accion':
@@ -104,6 +182,28 @@ async function gestionarSolicitudPopup(
         'La acción solicitada no está soportada por la extensión.',
       );
   }
+}
+
+async function leerAjustesEqualizador(): Promise<AjustesEqualizador> {
+  const almacenado = await browser.storage.local.get(CLAVE_STORAGE_EQUALIZADOR);
+  const ajustes = normalizarAjustesEqualizador(almacenado[CLAVE_STORAGE_EQUALIZADOR]);
+  console.log(PREFIJO_LOG_EQ, 'ajustes-cargados', resumirAjustesEqualizador(ajustes));
+  return ajustes;
+}
+
+async function guardarEqualizadorDesdePopup(
+  ajustesRecibidos: AjustesEqualizador,
+): Promise<RespuestaEqualizador> {
+  const ajustes = normalizarAjustesEqualizador(ajustesRecibidos);
+
+  console.log(PREFIJO_LOG_EQ, 'guardar-ajustes', resumirAjustesEqualizador(ajustes));
+
+  await browser.storage.local.set({
+    [CLAVE_STORAGE_EQUALIZADOR]: ajustes,
+  });
+  await sincronizarEqualizadorEnPestanas(ajustes);
+
+  return obtenerEstadoEqualizador(ajustes);
 }
 
 async function obtenerEstadoActual(): Promise<RespuestaPopup> {
@@ -231,6 +331,127 @@ async function ajustarVolumenDesdePopup(volumen: number): Promise<RespuestaPopup
   }
 }
 
+async function obtenerEstadoEqualizador(
+  ajustesGuardados?: AjustesEqualizador,
+): Promise<RespuestaEqualizador> {
+  const ajustes = ajustesGuardados ?? await leerAjustesEqualizador();
+  const pestana = await asegurarPestanaSoundCloud({
+    activar: false,
+    crearSiNoExiste: false,
+  });
+  const estadoBase = crearEstadoEqualizador(ajustes);
+
+  if (!pestana?.id) {
+    console.log(PREFIJO_LOG_EQ, 'estado-sin-pestana', resumirAjustesEqualizador(ajustes));
+    return crearRespuestaEqualizador(
+      'sin-pestana',
+      estadoBase,
+      'Puedes dejar el equalizador preparado. Se aplicara cuando abras SoundCloud.',
+    );
+  }
+
+  try {
+    const estado = await enviarSolicitudContenido<EstadoEqualizador | null>(pestana.id, {
+      canal: 'soundcloud-control',
+      tipo: 'obtener-equalizador',
+    });
+
+    if (!estado) {
+      console.warn(PREFIJO_LOG_EQ, 'content devolvio null al consultar estado', {
+        tabId: pestana.id,
+        status: pestana.status,
+      });
+      return crearRespuestaEqualizador(
+        pestana.status === 'complete' ? 'sin-reproductor' : 'cargando',
+        estadoBase,
+        pestana.status === 'complete'
+          ? 'SoundCloud esta abierto, pero el content script no devolvio un estado valido del equalizador.'
+          : 'SoundCloud todavia se esta cargando para preparar el equalizador.',
+      );
+    }
+
+    return crearRespuestaEqualizador(
+      estado.audioDetectado ? 'disponible' : pestana.status === 'complete' ? 'sin-reproductor' : 'cargando',
+      estado,
+      crearMensajeEqualizador(estado),
+    );
+  } catch (error) {
+    console.error(PREFIJO_LOG_EQ, 'estado-consulta-fallo', error, {
+      tabId: pestana.id,
+      status: pestana.status,
+      ajustes: resumirAjustesEqualizador(ajustes),
+    });
+    return crearRespuestaEqualizador(
+      pestana.status === 'complete' ? 'sin-reproductor' : 'cargando',
+      estadoBase,
+      pestana.status === 'complete'
+        ? 'SoundCloud esta abierto, pero el audio todavia no esta listo para el equalizador.'
+        : 'SoundCloud todavia se esta cargando para preparar el equalizador.',
+    );
+  }
+}
+
+async function sincronizarEqualizadorEnPestanas(ajustes: AjustesEqualizador) {
+  const tabs = await browser.tabs.query({
+    url: [...PATRONES_SOUNDCLOUD],
+    discarded: false,
+  });
+
+  console.log(PREFIJO_LOG_EQ, 'sincronizar-tabs', {
+    total: tabs.length,
+    ajustes: resumirAjustesEqualizador(ajustes),
+  });
+
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (!tab.id) {
+        return;
+      }
+
+      try {
+        const respuesta = await browser.tabs.sendMessage(tab.id, {
+          canal: 'soundcloud-control',
+          tipo: 'aplicar-equalizador',
+          ajustes,
+        } satisfies SolicitudContenido);
+
+        if (!respuesta) {
+          console.warn(PREFIJO_LOG_EQ, 'sincronizacion-sin-respuesta', {
+            tabId: tab.id,
+            status: tab.status,
+          });
+        }
+      } catch (error) {
+        console.warn(PREFIJO_LOG_EQ, 'sincronizacion-fallo', error, {
+          tabId: tab.id,
+          status: tab.status,
+          url: tab.url,
+        });
+      }
+    }),
+  );
+}
+
+function crearMensajeEqualizador(estado: EstadoEqualizador) {
+  if (!estado.audioDetectado) {
+    return 'La pestana de SoundCloud esta abierta, pero aun no hay audio disponible para procesar.';
+  }
+
+  if (estado.requiereInteraccion) {
+    return 'El equalizador esta preparado, pero el navegador requiere una interaccion en la pestana de SoundCloud.';
+  }
+
+  if (estado.procesando && estado.habilitado) {
+    return 'El equalizador esta actuando solo sobre el audio de SoundCloud.';
+  }
+
+  if (estado.procesando) {
+    return 'El equalizador esta listo en SoundCloud, pero ahora mismo esta desactivado.';
+  }
+
+  return 'La configuracion del equalizador esta guardada y esperando el reproductor de SoundCloud.';
+}
+
 async function abrirEnlaceEnPestanaObjetivo(url: string) {
   const pestana = await asegurarPestanaSoundCloud({
     activar: true,
@@ -294,17 +515,22 @@ function calcularPrioridadPestana(tab: PestanaSoundCloud) {
   ].reduce((total, valor) => total + valor, 0);
 }
 
+function esUrlSoundCloud(url: string | undefined) {
+  if (!url) {
+    return false;
+  }
+
+  return /^https?:\/\/([^/]+\.)?soundcloud\.com\//i.test(url);
+}
+
 async function inyectarEnTabsExistentes() {
   const tabs = await browser.tabs.query({ url: [...PATRONES_SOUNDCLOUD] });
   console.log('[BG] tabs SC existentes encontrados:', tabs.length);
   for (const tab of tabs) {
     if (!tab.id) continue;
     try {
-      await browser.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['/content-scripts/content.js'],
-      });
-      console.log('[BG] content script inyectado OK en tab', tab.id, tab.url);
+      await inyectarContentScript(tab.id);
+      console.log('[BG] content scripts inyectados OK en tab', tab.id, tab.url);
     } catch (err) {
       console.warn('[BG] fallo al inyectar en tab', tab.id, ':', err);
     }
@@ -312,16 +538,28 @@ async function inyectarEnTabsExistentes() {
 }
 
 async function inyectarContentScript(tabId: number) {
-  console.log('[BG] inyectando content script dinámicamente en tab', tabId);
+  console.log('[BG] inyectando content scripts dinamicamente en tab', tabId);
   try {
     await browser.scripting.executeScript({
       target: { tabId },
-      files: ['/content-scripts/content.js'],
+      files: [ARCHIVO_CONTENT_SCRIPT_MAIN],
+      world: 'MAIN',
     });
-    console.log('[BG] inyección dinámica OK en tab', tabId);
+    console.log('[BG] inyeccion MAIN world OK en tab', tabId);
   } catch (err) {
-    console.warn('[BG] inyección falló (puede que ya esté cargado):', err);
+    console.warn('[BG] inyeccion MAIN world fallo (puede que ya este cargado):', err);
   }
+
+  try {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      files: [ARCHIVO_CONTENT_SCRIPT],
+    });
+    console.log('[BG] inyeccion ISOLATED world OK en tab', tabId);
+  } catch (err) {
+    console.warn('[BG] inyeccion ISOLATED world fallo (puede que ya este cargado):', err);
+  }
+
   await esperar(250);
 }
 
@@ -700,20 +938,20 @@ async function iniciarDescargaBrowser(urlDescarga: string, titulo?: string): Pro
   return { tipo: 'descarga', exito: true, mensaje: 'Descarga iniciada.' };
 }
 
-async function enviarSolicitudContenido(
+async function enviarSolicitudContenido<TRespuesta = EstadoCancion | null>(
   tabId: number,
   solicitud: SolicitudContenido,
-): Promise<EstadoCancion | null> {
+): Promise<TRespuesta> {
   try {
     console.log('[BG] tabs.sendMessage ->', tabId, solicitud.tipo);
-    const res = (await browser.tabs.sendMessage(tabId, solicitud)) as EstadoCancion | null;
+    const res = (await browser.tabs.sendMessage(tabId, solicitud)) as TRespuesta;
     console.log('[BG] tabs.sendMessage respuesta:', res);
     return res;
   } catch (err) {
     console.warn('[BG] sendMessage falló → inyectando content script y reintentando:', err);
     await inyectarContentScript(tabId);
     console.log('[BG] reintento sendMessage ->', tabId, solicitud.tipo);
-    const res = (await browser.tabs.sendMessage(tabId, solicitud)) as EstadoCancion | null;
+    const res = (await browser.tabs.sendMessage(tabId, solicitud)) as TRespuesta;
     console.log('[BG] reintento respuesta:', res);
     return res;
   }

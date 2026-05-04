@@ -7,8 +7,10 @@ import {
   type ModoRepeticion,
   type SolicitudContenido,
 } from '../lib/contratos';
+import { crearGestorEqualizadorContenido } from '../lib/equalizerContenido';
 
 let ultimoVolumenAudible = 0.6;
+const gestorEqualizador = crearGestorEqualizadorContenido();
 
 const SELECTORES = {
   audio: ['audio'],
@@ -87,10 +89,14 @@ export default defineContentScript({
         console.log('[CS] resultado gestionarSolicitud:', resultado);
         enviarRespuesta(resultado);
       }).catch((err: unknown) => {
-        console.error('[CS] error en gestionarSolicitud:', err);
+        console.error('[CS] error en gestionarSolicitud:', mensaje?.tipo, err);
         enviarRespuesta(null);
       });
       return true;
+    });
+
+    void gestorEqualizador.inicializar().catch((error: unknown) => {
+      console.error('[EQ][CS] fallo inicializando equalizador:', error);
     });
   },
 });
@@ -102,6 +108,14 @@ async function gestionarSolicitud(solicitud: SolicitudContenido) {
 
   if (solicitud.tipo === 'ajustar-volumen') {
     return ajustarVolumen(solicitud.volumen);
+  }
+
+  if (solicitud.tipo === 'obtener-equalizador') {
+    return gestorEqualizador.obtenerEstado();
+  }
+
+  if (solicitud.tipo === 'aplicar-equalizador') {
+    return gestorEqualizador.aplicarAjustes(solicitud.ajustes);
   }
 
   return ejecutarAccion(solicitud.tipo);
