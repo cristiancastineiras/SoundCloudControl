@@ -3,31 +3,17 @@
   CaretDown,
   GearSix,
   GithubLogo,
-  Heart,
 } from '@phosphor-icons/react';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import pkg from '../../../package.json';
 import { type Idioma, type Textos } from '../i18n';
-
-const CLAVE_INTERVALO = 'sc-control-intervalo';
-
-function leerIntervalo(): number {
-  try {
-    const valor = localStorage.getItem(CLAVE_INTERVALO);
-    const numero = Number(valor);
-    return [2000, 4000, 8000].includes(numero) ? numero : 4000;
-  } catch {
-    return 4000;
-  }
-}
-
-function guardarIntervalo(ms: number) {
-  try {
-    localStorage.setItem(CLAVE_INTERVALO, String(ms));
-  } catch {
-    // sin acceso a localStorage
-  }
-}
 
 const COLORES_PRESET = [
   '#ff7700',
@@ -44,6 +30,9 @@ const ESTILO_FONDO_AJUSTES: CSSProperties = {
 };
 
 function SelectAjuste<T extends string>(props: {
+  id: string;
+  labelledBy: string;
+  describedBy?: string;
   value: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
@@ -51,8 +40,11 @@ function SelectAjuste<T extends string>(props: {
   return (
     <div className="relative">
       <select
+        id={props.id}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value as T)}
+        aria-labelledby={props.labelledBy}
+        aria-describedby={props.describedBy}
         className="w-full appearance-none rounded-[10px] border border-white/10 bg-white/6 py-2.5 pl-3.5 pr-9 text-[0.82rem] font-semibold text-marfil transition duration-150 hover:border-white/22 focus:border-[#ffc28c]/50 focus:outline-none cursor-pointer"
         style={{ backgroundImage: 'none' }}>
         {props.options.map((option) => (
@@ -73,12 +65,17 @@ function SelectAjuste<T extends string>(props: {
   );
 }
 
-function SelectorColor(props: { valor: string; onChange: (value: string) => void }) {
-  const { onChange, valor } = props;
+function SelectorColor(props: {
+  valor: string;
+  t: Textos;
+  labelledBy: string;
+  onChange: (value: string) => void;
+}) {
+  const { labelledBy, onChange, t, valor } = props;
   const esPreset = COLORES_PRESET.includes(valor as (typeof COLORES_PRESET)[number]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2.5" role="group" aria-labelledby={labelledBy}>
       {COLORES_PRESET.map((hex) => {
         const activo = valor.toLowerCase() === hex;
 
@@ -87,8 +84,9 @@ function SelectorColor(props: { valor: string; onChange: (value: string) => void
             key={hex}
             type="button"
             aria-pressed={activo}
+            aria-label={`${t.colorTemaPredeterminado(hex)}. ${activo ? t.activado : t.desactivado}`}
             onClick={() => onChange(hex)}
-            className="h-7 w-7 rounded-full transition duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+            className="h-8.5 w-8.5 rounded-full transition duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
             style={{
               backgroundColor: hex,
               boxShadow: activo ? `0 0 0 2px rgba(0, 0, 0, 0.7), 0 0 0 4px ${hex}` : 'none',
@@ -98,15 +96,16 @@ function SelectorColor(props: { valor: string; onChange: (value: string) => void
       })}
 
       <label
-        title="Pick theme color"
-        aria-label="Pick theme color"
-        className="relative h-7 w-7 cursor-pointer rounded-full transition duration-150 hover:scale-110"
+        className="relative h-8.5 w-8.5 cursor-pointer rounded-full transition duration-150 hover:scale-110"
         style={{
           background: esPreset
             ? 'linear-gradient(135deg, #555 0%, #333 50%, #888 100%)'
             : valor,
           boxShadow: !esPreset ? `0 0 0 2px rgba(0, 0, 0, 0.7), 0 0 0 4px ${valor}` : 'none',
         }}>
+        <span className="sr-only">
+          {esPreset ? t.colorTemaPersonalizado : t.colorTemaActual(valor)}
+        </span>
         {esPreset && (
           <span className="absolute inset-0 flex select-none items-center justify-center text-[0.75rem] font-bold text-white/70">
             +
@@ -116,6 +115,7 @@ function SelectorColor(props: { valor: string; onChange: (value: string) => void
           type="color"
           value={valor}
           onChange={(event) => onChange(event.target.value)}
+          aria-label={esPreset ? t.colorTemaPersonalizado : t.colorTemaActual(valor)}
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </label>
@@ -123,11 +123,20 @@ function SelectorColor(props: { valor: string; onChange: (value: string) => void
   );
 }
 
-export function BotonAjustes(props: { t: Textos; onClick: () => void }) {
+export function BotonAjustes(props: {
+  t: Textos;
+  onClick: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
+  expanded?: boolean;
+  controls?: string;
+}) {
   return (
     <button
       type="button"
-      aria-label={props.t.ajustes}
+      ref={props.buttonRef}
+      aria-label={props.t.abrirAjustes}
+      aria-expanded={props.expanded}
+      aria-controls={props.controls}
       onClick={props.onClick}
       className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/50 text-marfil/70 transition duration-150 hover:border-white/30 hover:text-marfil">
       <GearSix size={16} weight="bold" />
@@ -136,16 +145,40 @@ export function BotonAjustes(props: { t: Textos; onClick: () => void }) {
 }
 
 export function PantallaAjustes(props: {
+  panelId: string;
+  ayudaId: string;
   idioma: Idioma;
   t: Textos;
   colorTema: string;
+  intervalo: number;
+  backButtonRef?: Ref<HTMLButtonElement>;
   onVolver: () => void;
   onCambiarIdioma: (idioma: Idioma) => void;
   onCambiarColor: (color: string) => void;
+  onCambiarIntervalo: (intervalo: number) => void;
 }) {
-  const { colorTema, idioma, onCambiarColor, onCambiarIdioma, onVolver, t } = props;
-  const [intervalo, setIntervalo] = useState(leerIntervalo);
+  const {
+    ayudaId,
+    backButtonRef,
+    colorTema,
+    idioma,
+    intervalo,
+    onCambiarColor,
+    onCambiarIdioma,
+    onCambiarIntervalo,
+    onVolver,
+    panelId,
+    t,
+  } = props;
   const [guardado, setGuardado] = useState(false);
+  const idiomaId = useId();
+  const idiomaDescId = useId();
+  const intervaloId = useId();
+  const intervaloDescId = useId();
+  const temaId = useId();
+  const atajosId = useId();
+  const atajosDescId = useId();
+  const creditosId = useId();
   const estiloChipActivo: CSSProperties = {
     borderColor: 'rgb(var(--sc-theme-rgb) / 0.60)',
     backgroundImage:
@@ -168,8 +201,7 @@ export function PantallaAjustes(props: {
   }
 
   function aplicarIntervalo(ms: number) {
-    setIntervalo(ms);
-    guardarIntervalo(ms);
+    onCambiarIntervalo(ms);
     mostrarGuardado();
   }
 
@@ -188,29 +220,41 @@ export function PantallaAjustes(props: {
 
   return (
     <div
+      id={panelId}
       className="relative z-10 flex flex-col px-4 pb-5 pt-4"
+      role="region"
+      aria-labelledby="sc-settings-title"
+      aria-describedby={ayudaId}
       style={ESTILO_FONDO_AJUSTES}>
       <header className="mb-5 flex items-center gap-3">
         <button
           type="button"
+          ref={backButtonRef}
           onClick={onVolver}
-          aria-label={t.volver}
+          aria-label={t.volverAlReproductor}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/6 text-marfil/70 transition hover:border-white/25 hover:text-marfil">
           <ArrowLeft size={15} weight="bold" />
         </button>
-        <h1 className="m-0 text-[0.95rem] font-bold tracking-tight text-marfil">
+        <h2 id="sc-settings-title" className="m-0 text-[0.95rem] font-bold tracking-tight text-marfil">
           {t.ajustes}
-        </h1>
+        </h2>
         {guardado && (
-          <span className="ml-auto text-[0.72rem] font-semibold text-bosque-400/90">
+          <span className="ml-auto text-[0.72rem] font-semibold text-bosque-400/90" role="status" aria-live="polite">
             OK {t.guardado}
           </span>
         )}
       </header>
 
+      <p id={ayudaId} className="sr-only">{t.volverConEscape}</p>
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {guardado ? t.configuracionGuardada : ''}
+      </p>
+
       <div className="flex flex-col gap-5 pr-1">
-        <Seccion titulo={t.idiomaLabel}>
+        <Seccion titulo={t.idiomaLabel} tituloId={idiomaId} descId={idiomaDescId}>
           <SelectAjuste
+            id="sc-settings-language"
+            labelledBy={idiomaId}
             value={idioma}
             options={opcionesIdioma}
             onChange={(value) => {
@@ -220,14 +264,15 @@ export function PantallaAjustes(props: {
           />
         </Seccion>
 
-        <Seccion titulo={t.intervaloActualizacion} desc={t.intervaloDesc}>
-          <div className="flex gap-2">
+        <Seccion titulo={t.intervaloActualizacion} tituloId={intervaloId} desc={t.intervaloDesc} descId={intervaloDescId}>
+          <div className="flex gap-2" role="group" aria-labelledby={intervaloId} aria-describedby={intervaloDescId}>
             {([2000, 4000, 8000] as const).map((ms) => (
               <button
                 key={ms}
                 type="button"
                 className={claseChipIntervalo(intervalo === ms)}
                 style={intervalo === ms ? estiloChipActivo : undefined}
+                aria-pressed={intervalo === ms}
                 onClick={() => aplicarIntervalo(ms)}>
                 {ms === 2000 ? t.seg2 : ms === 4000 ? t.seg4 : t.seg8}
               </button>
@@ -235,17 +280,17 @@ export function PantallaAjustes(props: {
           </div>
         </Seccion>
 
-        <Seccion titulo={t.tema}>
-          <SelectorColor valor={colorTema} onChange={aplicarColor} />
+        <Seccion titulo={t.tema} tituloId={temaId}>
+          <SelectorColor valor={colorTema} t={t} labelledBy={temaId} onChange={aplicarColor} />
         </Seccion>
 
-        <Seccion titulo={t.atajos} desc={t.atajosDesc}>
+        <Seccion titulo={t.atajos} tituloId={atajosId} desc={t.atajosDesc} descId={atajosDescId}>
           <p className="m-0 rounded-[10px] border border-white/8 bg-white/4 px-3 py-2 font-mono text-[0.7rem] leading-relaxed text-marfil/50">
             {t.atajosDetalle}
           </p>
         </Seccion>
 
-        <Seccion titulo={t.creditos}>
+        <Seccion titulo={t.creditos} tituloId={creditosId}>
           <div className="flex flex-col gap-2 rounded-xl border border-white/8 bg-white/4 px-3.5 py-3 text-[0.78rem]">
             <FilaInfo label={t.version} value={`v${pkg.version}`} />
             <FilaInfo label={t.autor} value="Cristian Castiñeiras" />
@@ -256,6 +301,7 @@ export function PantallaAjustes(props: {
                   href="https://github.com/cristiancastineiras/SoundCloudControl"
                   target="_blank"
                   rel="noreferrer"
+                  aria-label={`GitHub. ${t.abreNuevaPestana}`}
                   className="inline-flex items-center gap-1 hover:underline"
                   style={estiloEnlaceTema}>
                   <GithubLogo size={13} weight="bold" />
@@ -272,19 +318,21 @@ export function PantallaAjustes(props: {
 
 function Seccion(props: {
   titulo: string;
+  tituloId: string;
   desc?: string;
+  descId?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="m-0 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-marfil/40">
+    <section className="flex flex-col gap-2" aria-labelledby={props.tituloId} aria-describedby={props.desc ? props.descId : undefined}>
+      <h3 id={props.tituloId} className="m-0 text-[0.68rem] font-bold uppercase tracking-[0.15em] text-marfil/40">
         {props.titulo}
-      </p>
+      </h3>
       {props.desc && (
-        <p className="m-0 text-[0.74rem] leading-snug text-marfil/40">{props.desc}</p>
+        <p id={props.descId} className="m-0 text-[0.74rem] leading-snug text-marfil/40">{props.desc}</p>
       )}
       {props.children}
-    </div>
+    </section>
   );
 }
 

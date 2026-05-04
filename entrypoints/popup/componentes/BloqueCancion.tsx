@@ -13,9 +13,12 @@ export function BloqueCancion(props: {
   onAbrirEnlace: (url: string | null) => Promise<void> | void;
 }) {
   const { bloqueado, cancion, onAbrirEnlace, respuesta, t } = props;
+  const detalleEstado = mensajeSecundario(respuesta);
 
   return (
-    <section className="flex flex-1 flex-col justify-end gap-2">
+    <section className="flex flex-1 flex-col justify-end gap-2" aria-labelledby="sc-current-track-heading">
+      <h2 id="sc-current-track-heading" className="sr-only">{t.reproductorActual}</h2>
+
       <button
         type="button"
         className={unirClases(
@@ -26,6 +29,7 @@ export function BloqueCancion(props: {
           void onAbrirEnlace(cancion?.urlArtista ?? null);
         }}
         disabled={!cancion?.urlArtista || bloqueado}
+        aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
         title={cancion?.artista ?? t.sinArtista}>
         {cancion?.artista ?? 'SoundCloud'}
       </button>
@@ -40,13 +44,16 @@ export function BloqueCancion(props: {
           void onAbrirEnlace(cancion?.urlCancion ?? null);
         }}
         disabled={!cancion?.urlCancion || bloqueado}
+        aria-label={cancion?.titulo ? t.abrirPaginaCancion(cancion.titulo) : respuesta.mensaje}
         title={cancion?.titulo ?? respuesta.mensaje}>
         {cancion?.titulo ?? respuesta.mensaje}
       </button>
 
-      <p className="m-0 max-w-62.5 text-[0.8rem] leading-[1.35] text-[rgba(255,244,234,0.82)]">
-        {mensajeSecundario(respuesta)}
-      </p>
+      {detalleEstado ? (
+        <p className="m-0 max-w-62.5 text-[0.8rem] leading-[1.35] text-[rgba(255,244,234,0.82)]">
+          {detalleEstado}
+        </p>
+      ) : null}
     </section>
   );
 }
