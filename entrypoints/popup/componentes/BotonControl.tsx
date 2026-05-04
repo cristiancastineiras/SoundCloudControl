@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { unirClases } from '../utilidades';
 
 const CLASES_BASE =
-  'inline-flex min-h-12 items-center justify-center rounded-[18px] border border-white/12 px-2.5 text-marfil backdrop-blur-md transition duration-150 ease-out hover:-translate-y-px hover:border-[#ffc28c]/60 disabled:cursor-wait disabled:opacity-65';
+  'inline-flex min-h-12 items-center justify-center rounded-[18px] border border-white/12 px-2.5 text-marfil backdrop-blur-md transition duration-150 ease-out hover:-translate-y-px hover:border-[#e5e5e5]/60 disabled:cursor-wait disabled:opacity-65';
 
 export function BotonControl(props: {
   etiqueta: string;

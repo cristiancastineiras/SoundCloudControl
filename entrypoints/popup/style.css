@@ -57,7 +57,7 @@
   input:focus-visible,
   select:focus-visible,
   a:focus-visible {
-    outline: 2px solid rgba(255, 183, 128, 0.9);
+    outline: 2px solid rgba(199, 199, 199, 0.9);
     outline-offset: 2px;
   }
 
@@ -119,6 +119,71 @@
     );
     mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.72));
     opacity: 0.55;
+  }
+
+  .sc-theme-ui :where(
+      a,
+      select,
+      textarea,
+      input:not([type='range'])
+    ):where([class~='border'], [class*='border-']) {
+    border-color: rgba(var(--sc-theme-rgb), 0.34);
+    color: #fff7f1;
+  }
+
+  .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']) {
+    border-color: rgba(var(--sc-theme-rgb), 0.38);
+    color: #fff7f1;
+  }
+
+  .sc-theme-ui :where(
+      div,
+      section,
+      article,
+      header,
+      footer,
+      aside,
+      p,
+      span,
+      li,
+      ul,
+      ol
+    ):where([class~='border'], [class*='border-']) {
+    border-color: rgba(var(--sc-theme-rgb), 0.22);
+  }
+
+  .sc-theme-ui :where(
+      a,
+      select,
+      textarea,
+      input:not([type='range'])
+    ):where([class~='border'], [class*='border-']):hover {
+    border-color: rgba(var(--sc-theme-rgb), 0.62);
+  }
+
+  .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']):hover,
+  .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-'])[aria-pressed='true'],
+  .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-'])[aria-current='true'] {
+    border-color: rgba(var(--sc-theme-rgb), 0.68);
+  }
+
+  .sc-theme-ui :where(
+      a,
+      select,
+      textarea,
+      input:not([type='range'])
+    ):where([class~='border'], [class*='border-']):focus-visible {
+    border-color: rgba(var(--sc-theme-rgb), 0.78);
+  }
+
+  .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']):focus-visible {
+    border-color: rgba(var(--sc-theme-rgb), 0.82);
+  }
+
+  .sc-theme-ui button,
+  .sc-theme-ui button svg,
+  .sc-theme-ui button span {
+    color: #fff7f1;
   }
 
   .slider-volumen::-webkit-slider-thumb {
