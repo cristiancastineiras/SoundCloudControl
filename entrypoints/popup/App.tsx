@@ -1,4 +1,5 @@
 import {
+  startTransition,
   useEffect,
   useEffectEvent,
   useRef,
@@ -8,9 +9,18 @@ import {
 import {
   type AccionReproductor,
   type RespuestaDescarga,
+  type RespuestaEqualizador,
   type RespuestaPopup,
   type SolicitudPopup,
 } from '../../lib/contratos';
+import {
+  crearAjustesEqualizadorDesdePreset,
+  crearEstadoEqualizador,
+  normalizarAjustesEqualizador,
+  type AjustesEqualizador,
+  type IdBandaEqualizador,
+  type IdPresetEqualizador,
+} from '../../lib/equalizer';
 import { obtenerImagenGrande } from '../../lib/soundcloud';
 import {
   type Idioma,
@@ -24,6 +34,7 @@ import { CabeceraPopup } from './componentes/CabeceraPopup';
 import { ControlesReproductor } from './componentes/ControlesReproductor';
 import { FondoPortada } from './componentes/FondoPortada';
 import { PantallaAjustes } from './componentes/PantallaAjustes';
+import { PantallaEqualizador } from './componentes/PantallaEqualizador';
 import { etiquetaEstado } from './utilidades';
 
 const CLAVE_INTERVALO = 'sc-control-intervalo';
@@ -33,6 +44,8 @@ const ID_TITULO_POPUP = 'sc-popup-title';
 const ID_ESTADO_VIVO = 'sc-popup-live-status';
 const ID_PANEL_AJUSTES = 'sc-popup-settings-panel';
 const ID_AYUDA_AJUSTES = 'sc-popup-settings-help';
+const ID_PANEL_EQUALIZADOR = 'sc-popup-equalizer-panel';
+const ID_AYUDA_EQUALIZADOR = 'sc-popup-equalizer-help';
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -100,7 +113,7 @@ function rgbaDesdeRgb(rgb: Rgb, alpha: number): string {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
-type Vista = 'principal' | 'ajustes';
+type Vista = 'principal' | 'ajustes' | 'equalizador';
 type AccionInterfaz = AccionReproductor | 'abrir-soundcloud' | 'abrir-enlace';
 type EstadoDescarga = null | 'descargando' | 'ok' | 'error';
 
@@ -114,11 +127,23 @@ function AplicacionPopup() {
     cancion: null,
     mensaje: TEXTOS[obtenerIdioma()].cargando,
   }));
+  const [respuestaEqualizador, setRespuestaEqualizador] = useState<RespuestaEqualizador>(() => ({
+    tipo: 'equalizador',
+    estadoVista: 'cargando',
+    equalizador: crearEstadoEqualizador(),
+    mensaje: TEXTOS[obtenerIdioma()].eqCargando,
+  }));
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
+  const [guardandoEqualizador, setGuardandoEqualizador] = useState(false);
   const botonAjustesRef = useRef<HTMLButtonElement | null>(null);
+  const botonEqualizadorRef = useRef<HTMLButtonElement | null>(null);
   const botonVolverRef = useRef<HTMLButtonElement | null>(null);
+  const botonVolverEqualizadorRef = useRef<HTMLButtonElement | null>(null);
   const vistaAnteriorRef = useRef<Vista>('principal');
+  const revisionEqualizadorRef = useRef(0);
+  const temporizadorEqualizadorRef = useRef<number | null>(null);
+  const ajustesEqualizadorPendientesRef = useRef<AjustesEqualizador | null>(null);
 
   const t = TEXTOS[idioma];
 
@@ -132,7 +157,7 @@ function AplicacionPopup() {
     }
 
     try {
-      const siguienteEstado = await enviarMensaje({
+      const siguienteEstado = await enviarMensaje<RespuestaPopup>({
         canal: 'soundcloud-control',
         destino: 'background',
         tipo: 'obtener-estado',
@@ -147,21 +172,85 @@ function AplicacionPopup() {
     }
   });
 
+  const cargarEqualizador = useEffectEvent(async (silencioso = false) => {
+    if (!silencioso) {
+      setRespuestaEqualizador((estadoActual) => ({
+        ...estadoActual,
+        estadoVista: estadoActual.estadoVista === 'disponible' ? 'disponible' : 'cargando',
+        mensaje: t.eqCargando,
+      }));
+    }
+
+    try {
+      const siguienteEstado = await enviarMensaje<RespuestaEqualizador>({
+        canal: 'soundcloud-control',
+        destino: 'background',
+        tipo: 'obtener-equalizador',
+      });
+
+      if (ajustesEqualizadorPendientesRef.current) {
+        return;
+      }
+
+      setRespuestaEqualizador(siguienteEstado);
+    } catch {
+      if (ajustesEqualizadorPendientesRef.current) {
+        return;
+      }
+
+      setRespuestaEqualizador((estadoActual) => ({
+        ...estadoActual,
+        estadoVista: 'error',
+        mensaje: t.eqErrorComunicacion,
+      }));
+    }
+  });
+
   useEffect(() => {
     void cargarEstado();
+    void cargarEqualizador(true);
 
     const intervalo = window.setInterval(() => {
       void cargarEstado(true);
+
+      if (
+        vista === 'equalizador' &&
+        !guardandoEqualizador &&
+        temporizadorEqualizadorRef.current === null
+      ) {
+        void cargarEqualizador(true);
+      }
     }, intervaloActualizacion);
 
     return () => {
       window.clearInterval(intervalo);
     };
-  }, [intervaloActualizacion]);
+  }, [guardandoEqualizador, intervaloActualizacion, vista]);
+
+  useEffect(() => {
+    if (vista !== 'equalizador' || temporizadorEqualizadorRef.current !== null) {
+      return;
+    }
+
+    void cargarEqualizador();
+  }, [vista]);
+
+  useEffect(() => {
+    return () => {
+      if (temporizadorEqualizadorRef.current !== null) {
+        window.clearTimeout(temporizadorEqualizadorRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = idioma;
-    document.title = vista === 'ajustes' ? `${t.ajustes} | ${t.appNombre}` : t.appNombre;
+    document.title =
+      vista === 'ajustes'
+        ? `${t.ajustes} | ${t.appNombre}`
+        : vista === 'equalizador'
+          ? `${t.equalizador} | ${t.appNombre}`
+          : t.appNombre;
   }, [idioma, t, vista]);
 
   useEffect(() => {
@@ -169,15 +258,19 @@ function AplicacionPopup() {
 
     if (vista === 'ajustes') {
       botonVolverRef.current?.focus();
+    } else if (vista === 'equalizador') {
+      botonVolverEqualizadorRef.current?.focus();
     } else if (vistaAnterior === 'ajustes') {
       botonAjustesRef.current?.focus();
+    } else if (vistaAnterior === 'equalizador') {
+      botonEqualizadorRef.current?.focus();
     }
 
     vistaAnteriorRef.current = vista;
   }, [vista]);
 
   useEffect(() => {
-    if (vista !== 'ajustes') {
+    if (vista === 'principal') {
       return undefined;
     }
 
@@ -197,6 +290,7 @@ function AplicacionPopup() {
   }, [vista]);
 
   const cancion = respuesta.cancion;
+  const equalizador = respuestaEqualizador.equalizador;
   const portada = obtenerImagenGrande(cancion?.urlImagen ?? null);
   const rgbTema = hexARgb(colorTema);
   const controlesBloqueados =
@@ -211,7 +305,8 @@ function AplicacionPopup() {
   const estadoInteractivoCargando =
     respuesta.estadoVista === 'cargando' ||
     accionEnCurso !== null ||
-    estadoDescarga === 'descargando';
+    estadoDescarga === 'descargando' ||
+    guardandoEqualizador;
   const textoEstadoDescarga =
     estadoDescarga === 'descargando'
       ? t.descargando
@@ -220,24 +315,34 @@ function AplicacionPopup() {
         : estadoDescarga === 'error'
           ? t.descargaError
           : '';
+  const resumenEstadoEqualizador = [
+    t.equalizador,
+    respuestaEqualizador.mensaje,
+    equalizador.habilitado ? t.eqActivado : t.eqDesactivado,
+    equalizador.audioDetectado ? t.eqAudioDetectado : t.eqAudioNoDetectado,
+  ].join('. ');
   const resumenEstadoEnVivo =
-    textoEstadoDescarga ||
-    (respuesta.estadoVista === 'disponible' && cancion
-      ? [
-          etiquetaEstado(respuesta, t),
-          cancion.titulo,
-          cancion.artista || t.sinArtista,
-          cancion.reproduciendo ? t.reproduciendoAhora : t.pausadoAhora,
-          t.volumenActual(cancion.volumen),
-        ].join('. ')
-      : [etiquetaEstado(respuesta, t), respuesta.mensaje].filter(Boolean).join('. '));
+    vista === 'equalizador'
+      ? resumenEstadoEqualizador
+      : textoEstadoDescarga ||
+        (respuesta.estadoVista === 'disponible' && cancion
+          ? [
+              etiquetaEstado(respuesta, t),
+              cancion.titulo,
+              cancion.artista || t.sinArtista,
+              cancion.reproduciendo ? t.reproduciendoAhora : t.pausadoAhora,
+              t.volumenActual(cancion.volumen),
+            ].join('. ')
+          : [etiquetaEstado(respuesta, t), respuesta.mensaje].filter(Boolean).join('. '));
   const anuncioUrgente =
-    respuesta.estadoVista === 'error' || estadoDescarga === 'error';
+    respuesta.estadoVista === 'error' ||
+    estadoDescarga === 'error' ||
+    respuestaEqualizador.estadoVista === 'error';
 
   async function ejecutarAccion(accion: AccionReproductor) {
     setAccionEnCurso(accion);
     try {
-      const siguienteEstado = await enviarMensaje({
+      const siguienteEstado = await enviarMensaje<RespuestaPopup>({
         canal: 'soundcloud-control',
         destino: 'background',
         tipo: 'ejecutar-accion',
@@ -254,7 +359,7 @@ function AplicacionPopup() {
   async function abrirSoundCloud() {
     setAccionEnCurso('abrir-soundcloud');
     try {
-      await enviarMensaje({
+      await enviarMensaje<RespuestaPopup>({
         canal: 'soundcloud-control',
         destino: 'background',
         tipo: 'abrir-soundcloud',
@@ -269,7 +374,7 @@ function AplicacionPopup() {
     if (!url) return;
     setAccionEnCurso('abrir-enlace');
     try {
-      await enviarMensaje({
+      await enviarMensaje<RespuestaPopup>({
         canal: 'soundcloud-control',
         destino: 'background',
         tipo: 'abrir-enlace',
@@ -285,7 +390,7 @@ function AplicacionPopup() {
     if (!cancion?.urlCancion) return;
     setEstadoDescarga('descargando');
     try {
-      const resultado = await enviarMensajeDescarga({
+      const resultado = await enviarMensaje<RespuestaDescarga>({
         canal: 'soundcloud-control',
         destino: 'background',
         tipo: 'descargar-cancion',
@@ -318,6 +423,143 @@ function AplicacionPopup() {
     }
 
     setIntervaloActualizacion(nuevoIntervalo);
+  }
+
+  const guardarEqualizador = useEffectEvent(
+    async (ajustesSiguientes: AjustesEqualizador, revision: number) => {
+      try {
+        const siguienteEstado = await enviarMensaje<RespuestaEqualizador>({
+          canal: 'soundcloud-control',
+          destino: 'background',
+          tipo: 'guardar-equalizador',
+          ajustes: ajustesSiguientes,
+        });
+
+        if (
+          revision !== revisionEqualizadorRef.current ||
+          ajustesEqualizadorPendientesRef.current
+        ) {
+          return;
+        }
+
+        setRespuestaEqualizador(siguienteEstado);
+      } catch {
+        if (
+          revision !== revisionEqualizadorRef.current ||
+          ajustesEqualizadorPendientesRef.current
+        ) {
+          return;
+        }
+
+        setRespuestaEqualizador((estadoActual) => ({
+          ...estadoActual,
+          estadoVista: 'error',
+          mensaje: t.eqErrorGuardar,
+        }));
+      } finally {
+        if (
+          revision === revisionEqualizadorRef.current &&
+          !ajustesEqualizadorPendientesRef.current &&
+          temporizadorEqualizadorRef.current === null
+        ) {
+          setGuardandoEqualizador(false);
+        }
+      }
+    },
+  );
+
+  function programarGuardadoEqualizador(ajustesSiguientes: AjustesEqualizador) {
+    const ajustesNormalizados = normalizarAjustesEqualizador(ajustesSiguientes);
+
+    revisionEqualizadorRef.current += 1;
+    const revision = revisionEqualizadorRef.current;
+
+    ajustesEqualizadorPendientesRef.current = ajustesNormalizados;
+    setGuardandoEqualizador(true);
+
+    startTransition(() => {
+      setRespuestaEqualizador((estadoActual) => ({
+        ...estadoActual,
+        equalizador: crearEstadoEqualizador({
+          ...estadoActual.equalizador,
+          ...ajustesNormalizados,
+          bandas: ajustesNormalizados.bandas,
+        }),
+      }));
+    });
+
+    if (temporizadorEqualizadorRef.current !== null) {
+      window.clearTimeout(temporizadorEqualizadorRef.current);
+    }
+
+    temporizadorEqualizadorRef.current = window.setTimeout(() => {
+      temporizadorEqualizadorRef.current = null;
+
+      const pendientes = ajustesEqualizadorPendientesRef.current;
+      ajustesEqualizadorPendientesRef.current = null;
+
+      if (pendientes) {
+        void guardarEqualizador(pendientes, revision);
+        return;
+      }
+
+      if (revision === revisionEqualizadorRef.current) {
+        setGuardandoEqualizador(false);
+      }
+    }, 90);
+  }
+
+  function actualizarEqualizador(
+    transformador: (actual: AjustesEqualizador) => AjustesEqualizador,
+  ) {
+    const ajustesActuales = normalizarAjustesEqualizador(respuestaEqualizador.equalizador);
+    const ajustesSiguientes = normalizarAjustesEqualizador(transformador(ajustesActuales));
+
+    programarGuardadoEqualizador(ajustesSiguientes);
+  }
+
+  function cambiarHabilitadoEqualizador(habilitado: boolean) {
+    actualizarEqualizador((actual) => ({
+      ...actual,
+      habilitado,
+    }));
+  }
+
+  function cambiarPreampEqualizador(valor: number) {
+    actualizarEqualizador((actual) => ({
+      ...actual,
+      preamp: valor,
+      presetId: 'personalizado',
+    }));
+  }
+
+  function cambiarBandaEqualizador(id: IdBandaEqualizador, valor: number) {
+    actualizarEqualizador((actual) => ({
+      ...actual,
+      presetId: 'personalizado',
+      bandas: {
+        ...actual.bandas,
+        [id]: valor,
+      },
+    }));
+  }
+
+  function aplicarPresetEqualizador(presetId: IdPresetEqualizador) {
+    const base = crearAjustesEqualizadorDesdePreset(presetId);
+
+    programarGuardadoEqualizador({
+      ...base,
+      habilitado: true,
+    });
+  }
+
+  function restablecerEqualizador() {
+    const base = crearAjustesEqualizadorDesdePreset('flat');
+
+    programarGuardadoEqualizador({
+      ...base,
+      habilitado: respuestaEqualizador.equalizador.habilitado,
+    });
   }
 
   return (
@@ -353,15 +595,35 @@ function AplicacionPopup() {
             onCambiarColor={cambiarColorTema}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
+        ) : vista === 'equalizador' ? (
+          <PantallaEqualizador
+            panelId={ID_PANEL_EQUALIZADOR}
+            ayudaId={ID_AYUDA_EQUALIZADOR}
+            t={t}
+            respuesta={respuestaEqualizador}
+            guardando={guardandoEqualizador}
+            backButtonRef={botonVolverEqualizadorRef}
+            onVolver={() => setVista('principal')}
+            onCambiarHabilitado={cambiarHabilitadoEqualizador}
+            onCambiarPreamp={cambiarPreampEqualizador}
+            onCambiarBanda={cambiarBandaEqualizador}
+            onAplicarPreset={aplicarPresetEqualizador}
+            onRestablecer={restablecerEqualizador}
+            onAbrirSoundCloud={abrirSoundCloud}
+          />
         ) : (
-          <div className="relative z-10 flex min-h-[391px] flex-col gap-4 px-4 pb-4 pt-4.5">
+          <div className="relative z-10 flex min-h-97.75 flex-col gap-4 px-4 pb-4 pt-4.5">
             <CabeceraPopup
               respuesta={respuesta}
               t={t}
               buttonRef={botonAjustesRef}
+              equalizerButtonRef={botonEqualizadorRef}
               ajustesAbiertos={false}
+              equalizadorAbierto={false}
               panelAjustesId={ID_PANEL_AJUSTES}
+              panelEqualizadorId={ID_PANEL_EQUALIZADOR}
               onAbrirAjustes={() => setVista('ajustes')}
+              onAbrirEqualizador={() => setVista('equalizador')}
             />
 
             <BloqueCancion
@@ -398,12 +660,8 @@ function AplicacionPopup() {
   );
 }
 
-async function enviarMensaje(mensaje: SolicitudPopup) {
-  return (await browser.runtime.sendMessage(mensaje)) as RespuestaPopup;
-}
-
-async function enviarMensajeDescarga(mensaje: SolicitudPopup & { tipo: 'descargar-cancion' }) {
-  return (await browser.runtime.sendMessage(mensaje)) as RespuestaDescarga;
+async function enviarMensaje<TRespuesta>(mensaje: SolicitudPopup) {
+  return (await browser.runtime.sendMessage(mensaje)) as TRespuesta;
 }
 
 export default AplicacionPopup;

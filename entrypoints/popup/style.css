@@ -152,6 +152,46 @@
   .slider-volumen::-moz-range-track {
     background: transparent;
   }
+
+  .slider-equalizer {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .slider-equalizer::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff7f1;
+    border: 1px solid rgba(10, 10, 10, 0.82);
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    height: 15px;
+    width: 15px;
+  }
+
+  .slider-equalizer::-moz-range-thumb {
+    background: #fff7f1;
+    border: 1px solid rgba(10, 10, 10, 0.82);
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    height: 15px;
+    width: 15px;
+  }
+
+  .slider-equalizer::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border-radius: 999px;
+    height: 8px;
+  }
+
+  .slider-equalizer::-moz-range-track {
+    background: transparent;
+    border-radius: 999px;
+    height: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,3 +1,9 @@
+import {
+  crearEstadoEqualizador,
+  type AjustesEqualizador,
+  type EstadoEqualizador,
+} from './equalizer';
+
 export const URL_BASE_SOUNDCLOUD = 'https://soundcloud.com/';
 
 export const PATRONES_SOUNDCLOUD = [
@@ -68,6 +74,13 @@ export interface RespuestaPopup {
   mensaje: string;
 }
 
+export interface RespuestaEqualizador {
+  tipo: 'equalizador';
+  estadoVista: EstadoVista;
+  equalizador: EstadoEqualizador;
+  mensaje: string;
+}
+
 export type SolicitudPopup =
   | {
       canal: 'soundcloud-control';
@@ -102,6 +115,25 @@ export type SolicitudPopup =
       destino: 'background';
       tipo: 'descargar-cancion';
       urlCancion: string;
+    }
+  | {
+      canal: 'soundcloud-control';
+      destino: 'background';
+      tipo: 'obtener-equalizador';
+    }
+  | {
+      canal: 'soundcloud-control';
+      destino: 'background';
+      tipo: 'guardar-equalizador';
+      ajustes: AjustesEqualizador;
+    };
+
+export type SolicitudBackground =
+  | SolicitudPopup
+  | {
+      canal: 'soundcloud-control';
+      destino: 'background';
+      tipo: 'obtener-configuracion-equalizador';
     };
 
 export interface RespuestaDescarga {
@@ -123,6 +155,15 @@ export type SolicitudContenido =
       canal: 'soundcloud-control';
       tipo: 'ajustar-volumen';
       volumen: number;
+    }
+  | {
+      canal: 'soundcloud-control';
+      tipo: 'obtener-equalizador';
+    }
+  | {
+      canal: 'soundcloud-control';
+      tipo: 'aplicar-equalizador';
+      ajustes: AjustesEqualizador;
     };
 
 export const ACCIONES_POR_COMANDO: Record<ComandoRapido, AccionReproductor> = {
@@ -151,11 +192,37 @@ export function esSolicitudPopup(valor: unknown): valor is SolicitudPopup {
     );
   }
 
+  if (posibleMensaje.tipo === 'guardar-equalizador') {
+    return (
+      posibleMensaje.canal === 'soundcloud-control' &&
+      posibleMensaje.destino === 'background' &&
+      Boolean(posibleMensaje.ajustes) &&
+      typeof posibleMensaje.ajustes === 'object'
+    );
+  }
+
   return (
     posibleMensaje.canal === 'soundcloud-control' &&
     posibleMensaje.destino === 'background' &&
     typeof posibleMensaje.tipo === 'string'
   );
+}
+
+export function esSolicitudBackground(valor: unknown): valor is SolicitudBackground {
+  if (!valor || typeof valor !== 'object') {
+    return false;
+  }
+
+  const posibleMensaje = valor as Partial<SolicitudBackground>;
+
+  if (posibleMensaje.tipo === 'obtener-configuracion-equalizador') {
+    return (
+      posibleMensaje.canal === 'soundcloud-control' &&
+      posibleMensaje.destino === 'background'
+    );
+  }
+
+  return esSolicitudPopup(valor);
 }
 
 export function esSolicitudContenido(valor: unknown): valor is SolicitudContenido {
@@ -169,6 +236,14 @@ export function esSolicitudContenido(valor: unknown): valor is SolicitudContenid
     return (
       posibleMensaje.canal === 'soundcloud-control' &&
       typeof posibleMensaje.volumen === 'number'
+    );
+  }
+
+  if (posibleMensaje.tipo === 'aplicar-equalizador') {
+    return (
+      posibleMensaje.canal === 'soundcloud-control' &&
+      Boolean(posibleMensaje.ajustes) &&
+      typeof posibleMensaje.ajustes === 'object'
     );
   }
 
@@ -186,6 +261,19 @@ export function crearRespuestaPopup(
   return {
     estadoVista,
     cancion,
+    mensaje,
+  };
+}
+
+export function crearRespuestaEqualizador(
+  estadoVista: EstadoVista,
+  equalizador: Partial<EstadoEqualizador> | AjustesEqualizador | undefined,
+  mensaje: string,
+): RespuestaEqualizador {
+  return {
+    tipo: 'equalizador',
+    estadoVista,
+    equalizador: crearEstadoEqualizador(equalizador),
     mensaje,
   };
 }
