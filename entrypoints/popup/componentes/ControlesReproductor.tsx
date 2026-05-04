@@ -71,10 +71,18 @@ export function ControlesReproductor(props: {
         ? 'border-red-400/55 bg-red-500/12 text-red-100'
         : 'border-white/15 bg-black/75 text-marfil hover:-translate-y-px hover:border-[#ffc28c]/60',
   );
+  const resumenReproductor = [
+    cancion.titulo,
+    cancion.artista || t.sinArtista,
+    cancion.reproduciendo ? t.reproduciendoAhora : t.pausadoAhora,
+    t.volumenActual(cancion.volumen),
+  ].join('. ');
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="grid grid-cols-3 gap-1.5" role="group" aria-label={t.appNombre}>
+      <p className="sr-only">{resumenReproductor}</p>
+
+      <div className="grid grid-cols-3 gap-1.5" role="group" aria-label={t.controlesTransporte}>
         <BotonControl
           etiqueta={t.pistaAnterior}
           onClick={() => {
@@ -107,7 +115,7 @@ export function ControlesReproductor(props: {
         </BotonControl>
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={t.appNombre}>
+      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={t.opcionesReproductor}>
         <button
           type="button"
           className={clasesBotonModo(aleatorioActivo)}
@@ -117,9 +125,8 @@ export function ControlesReproductor(props: {
           }}
           disabled={bloqueado}
           aria-pressed={aleatorioActivo}
-          aria-label={t.alternarAleatorio}>
+          aria-label={`${t.alternarAleatorio}. ${aleatorioActivo ? t.activado : t.desactivado}`}>
           <IconoControl nombre="aleatorio" weight={aleatorioActivo ? 'fill' : 'regular'} />
-          
         </button>
 
         <button
@@ -131,12 +138,11 @@ export function ControlesReproductor(props: {
           }}
           disabled={bloqueado}
           aria-pressed={repeticionListaActiva}
-          aria-label={t.alternarRepeticionLista}>
+          aria-label={`${t.alternarRepeticionLista}. ${repeticionListaActiva ? t.activado : t.desactivado}`}>
           <IconoControl
             nombre="repetirLista"
             weight={repeticionListaActiva ? 'fill' : 'regular'}
           />
-          
         </button>
 
         <button
@@ -148,12 +154,11 @@ export function ControlesReproductor(props: {
           }}
           disabled={bloqueado}
           aria-pressed={repeticionPistaActiva}
-          aria-label={t.alternarRepeticionPista}>
+          aria-label={`${t.alternarRepeticionPista}. ${repeticionPistaActiva ? t.activado : t.desactivado}`}>
           <IconoControl
             nombre="repetirPista"
             weight={repeticionPistaActiva ? 'fill' : 'regular'}
           />
-          
         </button>
 
         <button
@@ -170,7 +175,7 @@ export function ControlesReproductor(props: {
           }}
           disabled={bloqueado}
           aria-pressed={cancion.meGustaActivo}
-          aria-label={cancion.meGustaActivo ? t.quitarMeGusta : t.marcarMeGusta}>
+          aria-label={`${cancion.meGustaActivo ? t.quitarMeGusta : t.marcarMeGusta}. ${cancion.meGustaActivo ? t.activado : t.desactivado}`}>
           <IconoControl
             nombre="corazon"
             weight={cancion.meGustaActivo ? 'fill' : 'regular'}
@@ -190,14 +195,19 @@ export function ControlesReproductor(props: {
           }}
           disabled={bloqueado}
           aria-pressed={cancion.silenciado}
-          aria-label={cancion.silenciado ? t.activarSonido : t.silenciarSonido}>
+          aria-label={`${cancion.silenciado ? t.activarSonido : t.silenciarSonido}. ${cancion.silenciado ? t.activado : t.desactivado}`}>
           <IconoControl
             nombre={cancion.silenciado ? 'volumenMute' : 'volumenAlto'}
             weight={cancion.silenciado ? 'fill' : 'regular'}
           />
         </button>
-
       </div>
+
+      {estadoDescarga ? (
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {textoDescarga}
+        </p>
+      ) : null}
 
       <button
         type="button"
@@ -207,7 +217,6 @@ export function ControlesReproductor(props: {
         }}
         disabled={bloqueado || estadoDescarga === 'descargando'}
         aria-busy={estadoDescarga === 'descargando'}
-        aria-live="polite"
         aria-label={textoDescarga}>
         <IconoControl
           nombre={estadoDescarga === 'descargando' ? 'recargar' : 'descargar'}

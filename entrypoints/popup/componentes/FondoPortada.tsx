@@ -1,15 +1,14 @@
 export function FondoPortada(props: {
   portada: string | null;
-  descripcion: string;
 }) {
-  const { descripcion, portada } = props;
+  const { portada } = props;
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0" aria-hidden="true">
       {portada ? (
         <img
           src={portada}
-          alt={descripcion}
+          alt=""
           className="h-full w-full object-cover grayscale contrast-110 opacity-80"
         />
       ) : (

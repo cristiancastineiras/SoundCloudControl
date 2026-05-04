@@ -14,7 +14,7 @@ export function AccionesEstado(props: {
   };
 
   return (
-    <section className="grid grid-cols-2 gap-2">
+    <section aria-label={t.accionesDisponibles} className="grid grid-cols-2 gap-2">
       <button
         type="button"
         className="inline-flex min-h-11.5 items-center justify-center gap-1.5 rounded-[14px] border border-white/12 bg-[linear-gradient(135deg,#ff5f00_0%,#ff8f32_100%)] px-3 text-[0.9rem] font-semibold text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#ffc28c]/60 disabled:cursor-wait disabled:opacity-65"

@@ -1,8 +1,8 @@
 import type {
-  EstadoCancion,
   EstadoVista,
   RespuestaPopup,
 } from '../../lib/contratos';
+import type { Textos } from './i18n';
 
 export function unirClases(
   ...clases: Array<string | false | null | undefined>
@@ -10,28 +10,20 @@ export function unirClases(
   return clases.filter(Boolean).join(' ');
 }
 
-export function descripcionPortada(cancion: EstadoCancion | null) {
-  if (!cancion) {
-    return 'Portada de SoundCloud';
-  }
-
-  return `Portada de ${cancion.titulo} de ${cancion.artista || 'SoundCloud'}`;
-}
-
-export function etiquetaEstado(respuesta: RespuestaPopup) {
+export function etiquetaEstado(respuesta: RespuestaPopup, t: Textos) {
   switch (respuesta.estadoVista) {
     case 'disponible':
-      return 'Activo';
+      return t.estadoActivo;
     case 'sin-pestana':
-      return 'Sin pestaña';
+      return t.estadoSinPestana;
     case 'sin-reproductor':
-      return 'Sin reproductor';
+      return t.estadoSinReproductor;
     case 'cargando':
-      return 'Cargando';
+      return t.estadoCargando;
     case 'error':
-      return 'Error';
+      return t.estadoError;
     default:
-      return 'Estado';
+      return t.estadoPopup;
   }
 }
 

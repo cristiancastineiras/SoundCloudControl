@@ -1,4 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import {
   type AccionReproductor,
   type RespuestaDescarga,
@@ -18,12 +24,15 @@ import { CabeceraPopup } from './componentes/CabeceraPopup';
 import { ControlesReproductor } from './componentes/ControlesReproductor';
 import { FondoPortada } from './componentes/FondoPortada';
 import { PantallaAjustes } from './componentes/PantallaAjustes';
-import { descripcionPortada } from './utilidades';
+import { etiquetaEstado } from './utilidades';
 
 const CLAVE_INTERVALO = 'sc-control-intervalo';
 const CLAVE_TEMA = 'sc-control-tema';
-const ALTURA_POPUP = 391;
 const COLOR_TEMA_POR_DEFECTO = '#ff7700';
+const ID_TITULO_POPUP = 'sc-popup-title';
+const ID_ESTADO_VIVO = 'sc-popup-live-status';
+const ID_PANEL_AJUSTES = 'sc-popup-settings-panel';
+const ID_AYUDA_AJUSTES = 'sc-popup-settings-help';
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -99,6 +108,7 @@ function AplicacionPopup() {
   const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
   const [vista, setVista] = useState<Vista>('principal');
   const [colorTema, setColorTema] = useState(leerColorTema);
+  const [intervaloActualizacion, setIntervaloActualizacion] = useState(leerIntervalo);
   const [respuesta, setRespuesta] = useState<RespuestaPopup>(() => ({
     estadoVista: 'cargando',
     cancion: null,
@@ -106,36 +116,13 @@ function AplicacionPopup() {
   }));
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
+  const botonAjustesRef = useRef<HTMLButtonElement | null>(null);
+  const botonVolverRef = useRef<HTMLButtonElement | null>(null);
+  const vistaAnteriorRef = useRef<Vista>('principal');
 
   const t = TEXTOS[idioma];
 
-  useEffect(() => {
-    void cargarEstado();
-
-    const intervalo = window.setInterval(() => {
-      void cargarEstado(true);
-    }, leerIntervalo());
-
-    return () => {
-      window.clearInterval(intervalo);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const cancion = respuesta.cancion;
-  const portada = obtenerImagenGrande(cancion?.urlImagen ?? null);
-  const rgbTema = hexARgb(colorTema);
-  const controlesBloqueados =
-    accionEnCurso !== null || respuesta.estadoVista !== 'disponible';
-  const estiloTarjeta = {
-    background: `radial-gradient(circle at top left, ${rgbaDesdeRgb(rgbTema, 0.32)}, transparent 32%), linear-gradient(145deg, #121212 0%, #050505 58%, #19130f 100%)`,
-    ['--sc-theme-rgb' as string]: `${rgbTema.r} ${rgbTema.g} ${rgbTema.b}`,
-  } as CSSProperties;
-  const estiloBarraTema: CSSProperties = {
-    backgroundImage: `linear-gradient(90deg, ${mezclarConBlanco(colorTema, 0.04)} 0%, ${mezclarConBlanco(colorTema, 0.18)} 62%, ${mezclarConBlanco(colorTema, 0.56)} 100%)`,
-  };
-
-  async function cargarEstado(silencioso = false) {
+  const cargarEstado = useEffectEvent(async (silencioso = false) => {
     if (!silencioso) {
       setRespuesta((estadoActual) =>
         estadoActual.estadoVista === 'disponible'
@@ -158,7 +145,94 @@ function AplicacionPopup() {
         mensaje: t.errorComunicacion,
       });
     }
-  }
+  });
+
+  useEffect(() => {
+    void cargarEstado();
+
+    const intervalo = window.setInterval(() => {
+      void cargarEstado(true);
+    }, intervaloActualizacion);
+
+    return () => {
+      window.clearInterval(intervalo);
+    };
+  }, [intervaloActualizacion]);
+
+  useEffect(() => {
+    document.documentElement.lang = idioma;
+    document.title = vista === 'ajustes' ? `${t.ajustes} | ${t.appNombre}` : t.appNombre;
+  }, [idioma, t, vista]);
+
+  useEffect(() => {
+    const vistaAnterior = vistaAnteriorRef.current;
+
+    if (vista === 'ajustes') {
+      botonVolverRef.current?.focus();
+    } else if (vistaAnterior === 'ajustes') {
+      botonAjustesRef.current?.focus();
+    }
+
+    vistaAnteriorRef.current = vista;
+  }, [vista]);
+
+  useEffect(() => {
+    if (vista !== 'ajustes') {
+      return undefined;
+    }
+
+    const alPulsarTecla = (evento: KeyboardEvent) => {
+      if (evento.key !== 'Escape') {
+        return;
+      }
+
+      evento.preventDefault();
+      setVista('principal');
+    };
+
+    window.addEventListener('keydown', alPulsarTecla);
+    return () => {
+      window.removeEventListener('keydown', alPulsarTecla);
+    };
+  }, [vista]);
+
+  const cancion = respuesta.cancion;
+  const portada = obtenerImagenGrande(cancion?.urlImagen ?? null);
+  const rgbTema = hexARgb(colorTema);
+  const controlesBloqueados =
+    accionEnCurso !== null || respuesta.estadoVista !== 'disponible';
+  const estiloTarjeta = {
+    background: `radial-gradient(circle at top left, ${rgbaDesdeRgb(rgbTema, 0.32)}, transparent 32%), linear-gradient(145deg, #121212 0%, #050505 58%, #19130f 100%)`,
+    ['--sc-theme-rgb' as string]: `${rgbTema.r} ${rgbTema.g} ${rgbTema.b}`,
+  } as CSSProperties;
+  const estiloBarraTema: CSSProperties = {
+    backgroundImage: `linear-gradient(90deg, ${mezclarConBlanco(colorTema, 0.04)} 0%, ${mezclarConBlanco(colorTema, 0.18)} 62%, ${mezclarConBlanco(colorTema, 0.56)} 100%)`,
+  };
+  const estadoInteractivoCargando =
+    respuesta.estadoVista === 'cargando' ||
+    accionEnCurso !== null ||
+    estadoDescarga === 'descargando';
+  const textoEstadoDescarga =
+    estadoDescarga === 'descargando'
+      ? t.descargando
+      : estadoDescarga === 'ok'
+        ? t.descargaOk
+        : estadoDescarga === 'error'
+          ? t.descargaError
+          : '';
+  const resumenEstadoEnVivo =
+    textoEstadoDescarga ||
+    (respuesta.estadoVista === 'disponible' && cancion
+      ? [
+          etiquetaEstado(respuesta, t),
+          cancion.titulo,
+          cancion.artista || t.sinArtista,
+          cancion.reproduciendo ? t.reproduciendoAhora : t.pausadoAhora,
+          t.volumenActual(cancion.volumen),
+        ].join('. ')
+      : [etiquetaEstado(respuesta, t), respuesta.mensaje].filter(Boolean).join('. '));
+  const anuncioUrgente =
+    respuesta.estadoVista === 'error' || estadoDescarga === 'error';
 
   async function ejecutarAccion(accion: AccionReproductor) {
     setAccionEnCurso(accion);
@@ -236,26 +310,57 @@ function AplicacionPopup() {
     setColorTema(colorNormalizado);
   }
 
+  function cambiarIntervaloActualizacion(nuevoIntervalo: number) {
+    try {
+      localStorage.setItem(CLAVE_INTERVALO, String(nuevoIntervalo));
+    } catch {
+      // sin acceso a localStorage
+    }
+
+    setIntervaloActualizacion(nuevoIntervalo);
+  }
+
   return (
-    <main className="relative w-full">
-      <section className="fondo-tarjeta sombra-tarjeta relative overflow-hidden" style={estiloTarjeta}>
+    <main className="relative w-full" aria-labelledby={ID_TITULO_POPUP}>
+      <h1 id={ID_TITULO_POPUP} className="sr-only">{t.appNombre}</h1>
+      <p
+        id={ID_ESTADO_VIVO}
+        className="sr-only"
+        role="status"
+        aria-live={anuncioUrgente ? 'assertive' : 'polite'}
+        aria-atomic="true">
+        {resumenEstadoEnVivo}
+      </p>
+
+      <section
+        className="fondo-tarjeta sombra-tarjeta relative overflow-hidden"
+        style={estiloTarjeta}
+        aria-busy={estadoInteractivoCargando}>
         {/* <div className="absolute left-0 top-0 z-20 h-1 w-full" style={estiloBarraTema} /> */}
-        <FondoPortada portada={portada} descripcion={descripcionPortada(cancion)} />
+        <FondoPortada portada={portada} />
 
         {vista === 'ajustes' ? (
           <PantallaAjustes
+            panelId={ID_PANEL_AJUSTES}
+            ayudaId={ID_AYUDA_AJUSTES}
             idioma={idioma}
             t={t}
             colorTema={colorTema}
+            intervalo={intervaloActualizacion}
+            backButtonRef={botonVolverRef}
             onVolver={() => setVista('principal')}
             onCambiarIdioma={cambiarIdioma}
             onCambiarColor={cambiarColorTema}
+            onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
         ) : (
           <div className="relative z-10 flex min-h-[391px] flex-col gap-4 px-4 pb-4 pt-4.5">
             <CabeceraPopup
               respuesta={respuesta}
               t={t}
+              buttonRef={botonAjustesRef}
+              ajustesAbiertos={false}
+              panelAjustesId={ID_PANEL_AJUSTES}
               onAbrirAjustes={() => setVista('ajustes')}
             />
 
