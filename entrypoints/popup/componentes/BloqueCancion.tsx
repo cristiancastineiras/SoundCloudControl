@@ -3,7 +3,7 @@ import type { Textos } from '../i18n';
 import { mensajeSecundario, unirClases } from '../utilidades';
 
 const CLASES_META =
-  'inline-flex max-w-full self-start rounded-[4px] border border-white/10 bg-black/75 text-left text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#ffaa72]/50 hover:bg-ascua-500/20 disabled:cursor-default disabled:opacity-95';
+  'inline-flex max-w-full self-start rounded-[4px] border border-white/10 bg-black/75 text-left text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#e5e5e5]/50  disabled:cursor-default disabled:opacity-95';
 
 export function BloqueCancion(props: {
   cancion: EstadoCancion | null;

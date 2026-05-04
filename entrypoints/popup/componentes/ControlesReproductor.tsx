@@ -32,7 +32,7 @@ export function ControlesReproductor(props: {
       ? ACCIONES_REPRODUCTOR.desactivarRepeticion
       : ACCIONES_REPRODUCTOR.establecerRepeticionPista;
   const clasesBotonSecundario =
-    'inline-flex h-10 items-center justify-center rounded-[16px] border border-white/12 bg-black/72 text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#ffc28c]/60 disabled:cursor-wait disabled:opacity-65';
+    'inline-flex h-10 items-center justify-center rounded-[16px] border border-white/12 bg-black/72 text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#e5e5e5]/60 disabled:cursor-wait disabled:opacity-65';
   const estiloBotonActivo = {
     borderColor: 'rgb(var(--sc-theme-rgb) / 0.72)',
     backgroundImage:
@@ -69,7 +69,7 @@ export function ControlesReproductor(props: {
       ? 'border-emerald-300/50 bg-emerald-400/15 text-emerald-100'
       : estadoDescarga === 'error'
         ? 'border-red-400/55 bg-red-500/12 text-red-100'
-        : 'border-white/15 bg-black/75 text-marfil hover:-translate-y-px hover:border-[#ffc28c]/60',
+        : 'border-white/15 bg-black/75 text-marfil hover:-translate-y-px hover:border-[#e5e5e5]/60',
   );
   const resumenReproductor = [
     cancion.titulo,

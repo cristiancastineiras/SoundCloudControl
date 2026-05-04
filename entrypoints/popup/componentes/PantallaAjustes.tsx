@@ -73,6 +73,9 @@ function SelectorColor(props: {
 }) {
   const { labelledBy, onChange, t, valor } = props;
   const esPreset = COLORES_PRESET.includes(valor as (typeof COLORES_PRESET)[number]);
+  const [hoverColor, setHoverColor] = useState<string | null>(null);
+
+  const colorBordeActivo = hoverColor ?? valor;
 
   return (
     <div className="flex flex-wrap items-center gap-2.5" role="group" aria-labelledby={labelledBy}>
@@ -86,9 +89,12 @@ function SelectorColor(props: {
             aria-pressed={activo}
             aria-label={`${t.colorTemaPredeterminado(hex)}. ${activo ? t.activado : t.desactivado}`}
             onClick={() => onChange(hex)}
-            className="h-8.5 w-8.5 rounded-full transition duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+            onMouseEnter={() => setHoverColor(hex)}
+            onMouseLeave={() => setHoverColor(null)}
+            className="sc-theme-swatch h-8.5 w-8.5 rounded-full border transition duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
             style={{
               backgroundColor: hex,
+              borderColor: activo ? colorBordeActivo : 'rgba(255, 255, 255, 0.34)',
               boxShadow: activo ? `0 0 0 2px rgba(0, 0, 0, 0.7), 0 0 0 4px ${hex}` : 'none',
             }}
           />
@@ -96,18 +102,21 @@ function SelectorColor(props: {
       })}
 
       <label
-        className="relative h-8.5 w-8.5 cursor-pointer rounded-full transition duration-150 hover:scale-110"
+        onMouseEnter={() => setHoverColor(valor)}
+        onMouseLeave={() => setHoverColor(null)}
+        className="relative h-8.5 w-8.5 cursor-pointer rounded-full border transition duration-150 hover:scale-110"
         style={{
           background: esPreset
             ? 'linear-gradient(135deg, #555 0%, #333 50%, #888 100%)'
             : valor,
+          borderColor: colorBordeActivo,
           boxShadow: !esPreset ? `0 0 0 2px rgba(0, 0, 0, 0.7), 0 0 0 4px ${valor}` : 'none',
         }}>
         <span className="sr-only">
           {esPreset ? t.colorTemaPersonalizado : t.colorTemaActual(valor)}
         </span>
         {esPreset && (
-          <span className="absolute inset-0 flex select-none items-center justify-center text-[0.75rem] font-bold text-white/70">
+          <span className="absolute inset-0 flex select-none items-center justify-center text-[0.75rem] font-bold text-white">
             +
           </span>
         )}

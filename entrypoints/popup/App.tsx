@@ -575,7 +575,7 @@ function AplicacionPopup() {
       </p>
 
       <section
-        className="fondo-tarjeta sombra-tarjeta relative overflow-hidden"
+        className="fondo-tarjeta sombra-tarjeta sc-theme-ui relative overflow-hidden"
         style={estiloTarjeta}
         aria-busy={estadoInteractivoCargando}>
         {/* <div className="absolute left-0 top-0 z-20 h-1 w-full" style={estiloBarraTema} /> */}
