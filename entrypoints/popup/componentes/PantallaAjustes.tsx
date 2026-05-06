@@ -159,11 +159,13 @@ export function PantallaAjustes(props: {
   idioma: Idioma;
   t: Textos;
   colorTema: string;
+  mostrarDescargaMp3: boolean;
   intervalo: number;
   backButtonRef?: Ref<HTMLButtonElement>;
   onVolver: () => void;
   onCambiarIdioma: (idioma: Idioma) => void;
   onCambiarColor: (color: string) => void;
+  onCambiarMostrarDescargaMp3: (mostrar: boolean) => void;
   onCambiarIntervalo: (intervalo: number) => void;
 }) {
   const {
@@ -172,8 +174,10 @@ export function PantallaAjustes(props: {
     colorTema,
     idioma,
     intervalo,
+    mostrarDescargaMp3,
     onCambiarColor,
     onCambiarIdioma,
+    onCambiarMostrarDescargaMp3,
     onCambiarIntervalo,
     onVolver,
     panelId,
@@ -185,6 +189,8 @@ export function PantallaAjustes(props: {
   const intervaloId = useId();
   const intervaloDescId = useId();
   const temaId = useId();
+  const descargaId = useId();
+  const descargaDescId = useId();
   const atajosId = useId();
   const atajosDescId = useId();
   const creditosId = useId();
@@ -216,6 +222,11 @@ export function PantallaAjustes(props: {
 
   function aplicarColor(color: string) {
     onCambiarColor(color);
+    mostrarGuardado();
+  }
+
+  function aplicarMostrarDescarga(mostrar: boolean) {
+    onCambiarMostrarDescargaMp3(mostrar);
     mostrarGuardado();
   }
 
@@ -291,6 +302,31 @@ export function PantallaAjustes(props: {
 
         <Seccion titulo={t.tema} tituloId={temaId}>
           <SelectorColor valor={colorTema} t={t} labelledBy={temaId} onChange={aplicarColor} />
+        </Seccion>
+
+        <Seccion
+          titulo={t.botonDescargaMp3}
+          tituloId={descargaId}
+          desc={t.botonDescargaMp3Desc}
+          descId={descargaDescId}>
+          <div className="flex gap-2" role="group" aria-labelledby={descargaId} aria-describedby={descargaDescId}>
+            <button
+              type="button"
+              className={claseChipIntervalo(mostrarDescargaMp3)}
+              style={mostrarDescargaMp3 ? estiloChipActivo : undefined}
+              aria-pressed={mostrarDescargaMp3}
+              onClick={() => aplicarMostrarDescarga(true)}>
+              {t.mostrar}
+            </button>
+            <button
+              type="button"
+              className={claseChipIntervalo(!mostrarDescargaMp3)}
+              style={!mostrarDescargaMp3 ? estiloChipActivo : undefined}
+              aria-pressed={!mostrarDescargaMp3}
+              onClick={() => aplicarMostrarDescarga(false)}>
+              {t.ocultar}
+            </button>
+          </div>
         </Seccion>
 
         <Seccion titulo={t.atajos} tituloId={atajosId} desc={t.atajosDesc} descId={atajosDescId}>

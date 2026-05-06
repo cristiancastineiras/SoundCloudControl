@@ -132,6 +132,10 @@ export const TEXTOS = {
     atajosDesc: 'Puedes modificar los atajos desde la página de extensiones del navegador.',
     atajosDetalle: 'Ctrl+Shift+5 · Anterior   |   Ctrl+Shift+6 · Play/Pause   |   Ctrl+Shift+7 · Siguiente',
     tema: 'Tema de color',
+    botonDescargaMp3: 'Boton de descarga MP3',
+    botonDescargaMp3Desc: 'Permite mostrar u ocultar el boton para descargar la pista en MP3 en la pantalla principal.',
+    mostrar: 'Mostrar',
+    ocultar: 'Ocultar',
     temaNaranja: 'Naranja (por defecto)',
     guardado: 'Guardado',
 
@@ -245,6 +249,10 @@ export const TEXTOS = {
     atajosDesc: 'You can change shortcuts from the browser extensions page.',
     atajosDetalle: 'Ctrl+Shift+5 · Previous   |   Ctrl+Shift+6 · Play/Pause   |   Ctrl+Shift+7 · Next',
     tema: 'Color theme',
+    botonDescargaMp3: 'MP3 download button',
+    botonDescargaMp3Desc: 'Lets you show or hide the button used to download the current track as MP3 on the main screen.',
+    mostrar: 'Show',
+    ocultar: 'Hide',
     temaNaranja: 'Orange (default)',
     guardado: 'Saved',
 
