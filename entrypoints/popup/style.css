@@ -1,25 +1,73 @@
-﻿@import '@fontsource/inter/latin.css';
-@import '@fontsource/manrope/latin.css';
+/* ============================================================================
+ * SoundCloud Control · Hoja de estilos
+ *
+ * Sistema de diseño basado en el SoundCloud Media Kit:
+ *   - Naranja oficial #FF5500
+ *   - Negro oficial   #121212
+ *   - Blanco oficial  #FAFAFA
+ *   - Paleta secundaria oficial (lima, amarillo, rojo, rosa, lavanda, azul,
+ *     beige) y escala de grises 01–04.
+ *
+ * Toda la UI consume tokens de @theme (Tailwind v4) y clases utilitarias
+ * `.sc-*` en lugar de estilos en línea o cadenas largas duplicadas. El color
+ * de tema activo se inyecta como triple RGB en `--sc-theme-rgb` desde el
+ * componente raíz para que todas las clases reaccionen en cascada.
+ * ============================================================================
+ */
+
+@import '@fontsource/inter/latin.css';
+@import '@fontsource/geist/latin.css';
 @import 'tailwindcss';
 
 @theme {
+  /* Tipografías ----------------------------------------------------------- */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-manrope: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --color-marfil: #fff7f1;
+  --font-geist: 'Geist', 'Geist Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-manrope: var(--font-geist);
+
+  /* SoundCloud · paleta primaria ----------------------------------------- */
+  --color-sc-orange: #ff5500;
+  --color-sc-black: #121212;
+  --color-sc-white: #fafafa;
+
+  /* SoundCloud · paleta secundaria --------------------------------------- */
+  --color-sc-lime: #dcf400;
+  --color-sc-yellow: #ffb200;
+  --color-sc-red: #ec2e10;
+  --color-sc-pink: #ffa4f3;
+  --color-sc-lavender: #b3a2f2;
+  --color-sc-blue: #4e83db;
+  --color-sc-beige: #98826d;
+
+  /* SoundCloud · escala de grises ---------------------------------------- */
+  --color-sc-grey-1: #272727;
+  --color-sc-grey-2: #565656;
+  --color-sc-grey-3: #a0a0a0;
+  --color-sc-grey-4: #cacaca;
+
+  /* Aliases semánticos (mantienen compatibilidad con código previo) ------ */
+  --color-marfil: #fafafa;          /* Texto principal sobre fondo oscuro */
+  --color-ascua-500: #ff5500;       /* Naranja SoundCloud por defecto    */
   --color-ambar-100: #ffd9be;
-  --color-ascua-500: #ff7700;
-  --color-bosque-400: #61d37c;
-  --color-rojo-400: #ff5c5c;
+  --color-bosque-400: #dcf400;      /* Estado positivo (lima oficial)    */
+  --color-rojo-400: #ec2e10;        /* Estado de error (rojo oficial)    */
 }
 
+/* =============================================================================
+ *  BASE
+ * ============================================================================= */
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   :root {
+    --sc-radius-pill: 999px;
+    --sc-radius-lg: 18px;
+    --sc-radius-md: 14px;
+    --sc-radius-sm: 10px;
+    --sc-shadow-card: 0 18px 36px rgb(0 0 0 / 0.45),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
     color-scheme: dark;
-    color: #fff7f1;
+    color: var(--color-sc-white);
     font-synthesis: none;
     line-height: 1.4;
     text-rendering: optimizeLegibility;
@@ -28,42 +76,30 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  html,
-  body,
-  #root {
-    min-height: 100%;
-  }
+  html, body, #root { min-height: 100%; }
 
   body {
     background:
-      radial-gradient(circle at top, rgba(255, 119, 0, 0.18), transparent 26%),
+      radial-gradient(circle at top, rgb(255 85 0 / 0.18), transparent 26%),
       linear-gradient(180deg, #151515 0%, #050505 100%);
-    color: #fff7f1;
+    color: var(--color-sc-white);
     font-family: var(--font-sans);
     margin: 0;
     min-width: 312px;
     width: 312px;
   }
 
-  button,
-  input,
-  textarea,
-  select,
-  a {
-    font: inherit;
-  }
+  button, input, textarea, select, a { font: inherit; }
 
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
   a:focus-visible {
-    outline: 2px solid rgba(199, 199, 199, 0.9);
+    outline: 2px solid rgb(202 202 202 / 0.9);
     outline-offset: 2px;
   }
 
-  button {
-    cursor: pointer !important;
-  }
+  button { cursor: pointer !important; }
 
   .sr-only {
     border: 0;
@@ -78,187 +114,381 @@
   }
 }
 
+/* =============================================================================
+ *  COMPONENTES (clases utilitarias `.sc-*`)
+ *
+ *  Convenciones:
+ *  - `data-active="true"` activa el resalte con el color de tema.
+ *  - `--sc-theme-rgb` (definido en la raíz del popup) se utiliza con la
+ *    sintaxis `rgb(var(--sc-theme-rgb) / <alpha>)`.
+ * ============================================================================= */
 @layer components {
-  .fondo-tarjeta {
+
+  /* --- Tarjeta principal y fondos del popup ----------------------------- */
+  .sc-card {
     background:
-      radial-gradient(circle at top left, rgba(255, 119, 0, 0.32), transparent 32%),
-      linear-gradient(145deg, #121212 0%, #050505 58%, #19130f 100%);
+      radial-gradient(circle at top left, rgb(var(--sc-theme-rgb) / 0.32), transparent 32%),
+      linear-gradient(145deg, var(--color-sc-black) 0%, #050005 58%, #19130f 100%);
+    box-shadow: var(--sc-shadow-card);
+    overflow: hidden;
+    position: relative;
   }
 
-  .sombra-tarjeta {
-    box-shadow:
-      0 18px 36px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-
-  .portada-relleno {
+  .sc-cover-fill {
     background:
-      linear-gradient(135deg, rgba(255, 119, 0, 0.5), rgba(35, 35, 35, 0.9)),
-      repeating-linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.08),
-        rgba(255, 255, 255, 0.08) 2px,
+      linear-gradient(135deg, rgb(255 85 0 / 0.5), rgb(35 35 35 / 0.9)),
+      repeating-linear-gradient(180deg,
+        rgb(255 255 255 / 0.08),
+        rgb(255 255 255 / 0.08) 2px,
         transparent 2px,
-        transparent 9px
-      );
+        transparent 9px);
   }
 
-  .capa-velo {
+  .sc-veil {
     background:
-      linear-gradient(180deg, rgba(5, 5, 5, 0.04) 0%, rgba(5, 5, 5, 0.38) 38%, rgba(0, 0, 0, 0.97) 100%),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.48), transparent 40%, rgba(0, 0, 0, 0.22) 100%);
+      linear-gradient(180deg, rgb(5 5 5 / 0.04) 0%, rgb(5 5 5 / 0.38) 38%, rgb(0 0 0 / 0.97) 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.48), transparent 40%, rgb(0 0 0 / 0.22) 100%);
   }
 
-  .capa-trama {
-    background: repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.06) 1px,
+  .sc-pattern {
+    background: repeating-linear-gradient(180deg,
+      rgb(255 255 255 / 0.06),
+      rgb(255 255 255 / 0.06) 1px,
       transparent 1px,
-      transparent 7px
-    );
-    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.72));
+      transparent 7px);
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.72));
     opacity: 0.55;
   }
 
-  .sc-theme-ui :where(
-      a,
-      select,
-      textarea,
-      input:not([type='range'])
-    ):where([class~='border'], [class*='border-']) {
-    border-color: rgba(var(--sc-theme-rgb), 0.34);
-    color: #fff7f1;
+  .sc-panel-bg {
+    background:
+      radial-gradient(circle at top right, rgb(var(--sc-theme-rgb) / 0.16), transparent 38%),
+      linear-gradient(180deg, rgb(20 20 18 / 0.96) 0%, rgb(14 13 12 / 0.98) 100%);
   }
 
+  /* --- Tipografía / títulos --------------------------------------------- */
+  .sc-section-title {
+    color: rgb(250 250 250 / 0.4);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .sc-section-desc {
+    color: rgb(250 250 250 / 0.4);
+    font-size: 0.74rem;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  .sc-meta-pill {
+    background-color: rgb(0 0 0 / 0.75);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 4px;
+    color: var(--color-sc-white);
+    display: inline-flex;
+    max-width: 100%;
+    text-align: left;
+    transition: transform 150ms ease-out, border-color 150ms ease-out;
+  }
+  .sc-meta-pill:hover:not(:disabled) {
+    border-color: rgb(229 229 229 / 0.5);
+    transform: translateY(-1px);
+  }
+  .sc-meta-pill:disabled {
+    cursor: default;
+    opacity: 0.95;
+  }
+
+  /* --- Botones ---------------------------------------------------------- */
+
+  /* Botón circular pequeño (cabecera, retroceso) */
+  .sc-btn-icon {
+    align-items: center;
+    background-color: rgb(0 0 0 / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: var(--sc-radius-pill);
+    color: rgb(250 250 250 / 0.7);
+    display: inline-flex;
+    height: 2rem;
+    justify-content: center;
+    transition: border-color 150ms, color 150ms;
+    width: 2rem;
+  }
+  .sc-btn-icon:hover {
+    border-color: rgb(255 255 255 / 0.3);
+    color: var(--color-sc-white);
+  }
+
+  .sc-btn-back {
+    align-items: center;
+    background-color: rgb(255 255 255 / 0.06);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: var(--sc-radius-pill);
+    color: rgb(250 250 250 / 0.7);
+    display: inline-flex;
+    height: 2rem;
+    justify-content: center;
+    transition: border-color 150ms, color 150ms;
+    width: 2rem;
+  }
+  .sc-btn-back:hover {
+    border-color: rgb(255 255 255 / 0.25);
+    color: var(--color-sc-white);
+  }
+
+  /* Botón secundario base (controles de transporte / acciones) */
+  .sc-btn {
+    align-items: center;
+    backdrop-filter: blur(6px);
+    background-color: rgb(0 0 0 / 0.7);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: var(--sc-radius-lg);
+    color: var(--color-sc-white);
+    display: inline-flex;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0 0.625rem;
+    transition: transform 150ms ease-out, border-color 150ms ease-out,
+      background-color 150ms ease-out, color 150ms ease-out;
+  }
+  .sc-btn:hover:not(:disabled) {
+    border-color: rgb(229 229 229 / 0.6);
+    transform: translateY(-1px);
+  }
+  .sc-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  /* Botón principal (gradiente naranja oficial) */
+  .sc-btn-primary {
+    background-image: linear-gradient(135deg,
+      rgb(var(--sc-theme-rgb) / 0.92) 0%,
+      rgb(var(--sc-theme-rgb) / 0.62) 100%);
+    background-color: transparent;
+    color: #140800;
+  }
+  .sc-btn-primary:hover:not(:disabled) {
+    border-color: rgb(var(--sc-theme-rgb) / 0.78);
+  }
+
+  /* Botón secundario compacto (paneles ajustes / equalizador) */
+  .sc-btn-soft {
+    align-items: center;
+    background-color: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 12px;
+    color: rgb(250 250 250 / 0.78);
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 600;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 150ms, color 150ms, background-color 150ms;
+  }
+  .sc-btn-soft:hover:not(:disabled) {
+    border-color: rgb(255 255 255 / 0.24);
+    color: var(--color-sc-white);
+  }
+
+  /* Botón modo (toggle pulsable: aleatorio / repetir / me gusta / mute) */
+  .sc-btn-mode {
+    align-items: center;
+    background-color: rgb(0 0 0 / 0.72);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 16px;
+    color: rgb(250 250 250 / 0.78);
+    display: inline-flex;
+    height: 2.5rem;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    transition: transform 150ms ease-out, border-color 150ms ease-out,
+      background-color 150ms ease-out, background-image 150ms ease-out,
+      color 150ms ease-out;
+  }
+  .sc-btn-mode:hover:not(:disabled) {
+    border-color: rgb(229 229 229 / 0.6);
+    transform: translateY(-1px);
+  }
+  .sc-btn-mode:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+  .sc-btn-mode[data-active='true'] {
+    background-color: transparent;
+    background-image: linear-gradient(180deg,
+      rgb(var(--sc-theme-rgb) / 0.34),
+      rgb(var(--sc-theme-rgb) / 0.16));
+    border-color: rgb(var(--sc-theme-rgb) / 0.72);
+    box-shadow:
+      0 0 0 1px rgb(var(--sc-theme-rgb) / 0.24),
+      0 10px 24px rgb(var(--sc-theme-rgb) / 0.18);
+    color: #fff2e8;
+  }
+  /* Variante atenuada para "me gusta" / "silencio" cuando están activos */
+  .sc-btn-mode[data-active='true'][data-variant='soft'] {
+    background-image: none;
+    background-color: rgb(var(--sc-theme-rgb) / 0.2);
+    border-color: rgb(var(--sc-theme-rgb) / 0.58);
+    box-shadow: none;
+    color: var(--color-sc-white);
+  }
+
+  /* Botón de descarga MP3 (variantes por estado) */
+  .sc-btn-download {
+    align-items: center;
+    background-color: rgb(0 0 0 / 0.75);
+    border: 1px solid rgb(255 255 255 / 0.15);
+    border-radius: 16px;
+    color: var(--color-sc-white);
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    height: 2.75rem;
+    justify-content: center;
+    letter-spacing: 0.01em;
+    transition: border-color 150ms, transform 150ms;
+    width: 100%;
+  }
+  .sc-btn-download:hover:not(:disabled) {
+    border-color: rgb(229 229 229 / 0.6);
+    transform: translateY(-1px);
+  }
+  .sc-btn-download:disabled {
+    cursor: wait;
+    opacity: 0.7;
+  }
+  .sc-btn-download[data-state='ok'] {
+    background-color: rgb(220 244 0 / 0.15);
+    border-color: rgb(220 244 0 / 0.5);
+    color: var(--color-sc-lime);
+  }
+  .sc-btn-download[data-state='error'] {
+    background-color: rgb(236 46 16 / 0.12);
+    border-color: rgb(236 46 16 / 0.55);
+    color: #ffd2c8;
+  }
+
+  /* --- Chips (selectores en ajustes / equalizador) ---------------------- */
+  .sc-chip {
+    background-color: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 10px;
+    color: rgb(250 250 250 / 0.5);
+    display: inline-flex;
+    flex: 1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 0;
+    text-align: center;
+    transition: border-color 150ms, color 150ms, background-color 150ms,
+      background-image 150ms, box-shadow 150ms;
+  }
+  .sc-chip:hover {
+    border-color: rgb(255 255 255 / 0.18);
+    color: rgb(250 250 250 / 0.75);
+  }
+  .sc-chip[data-active='true'] {
+    background-image: linear-gradient(180deg,
+      rgb(var(--sc-theme-rgb) / 0.28),
+      rgb(var(--sc-theme-rgb) / 0.10));
+    border-color: rgb(var(--sc-theme-rgb) / 0.6);
+    box-shadow: 0 0 0 1px rgb(var(--sc-theme-rgb) / 0.14);
+    color: var(--color-sc-white);
+  }
+
+  /* --- Selectores nativos (combo-box) ----------------------------------- */
+  .sc-select {
+    appearance: none;
+    background-color: rgb(255 255 255 / 0.06);
+    background-image: none;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: var(--sc-radius-sm);
+    color: var(--color-sc-white);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.625rem 2.25rem 0.625rem 0.875rem;
+    transition: border-color 150ms;
+    width: 100%;
+  }
+  .sc-select:hover { border-color: rgb(255 255 255 / 0.22); }
+  .sc-select:focus { border-color: rgb(var(--sc-theme-rgb) / 0.55); outline: none; }
+  .sc-select option { background-color: var(--color-sc-grey-1); color: var(--color-sc-white); }
+
+  /* --- Sliders ---------------------------------------------------------- */
+  .slider-volumen::-webkit-slider-thumb,
+  .slider-volumen::-moz-range-thumb {
+    appearance: none;
+    background: var(--color-sc-white);
+    border: 1px solid rgb(15 15 15 / 0.85);
+    border-radius: var(--sc-radius-pill);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
+    cursor: pointer;
+    height: 14px;
+    width: 14px;
+  }
+  .slider-volumen::-webkit-slider-runnable-track,
+  .slider-volumen::-moz-range-track { background: transparent; }
+
+  .slider-equalizer { background-color: rgb(255 255 255 / 0.08); }
+  .slider-equalizer::-webkit-slider-thumb,
+  .slider-equalizer::-moz-range-thumb {
+    appearance: none;
+    background: var(--color-sc-white);
+    border: 1px solid rgb(10 10 10 / 0.82);
+    border-radius: var(--sc-radius-pill);
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.28);
+    cursor: pointer;
+    height: 15px;
+    width: 15px;
+  }
+  .slider-equalizer::-webkit-slider-runnable-track,
+  .slider-equalizer::-moz-range-track {
+    background: transparent;
+    border-radius: var(--sc-radius-pill);
+    height: 8px;
+  }
+
+  /* --- Tema activo: bordes y enlaces que reaccionan al color elegido ---- */
+  .sc-theme-ui :where(a, select, textarea, input:not([type='range']))
+    :where([class~='border'], [class*='border-']) {
+    border-color: rgb(var(--sc-theme-rgb) / 0.34);
+    color: var(--color-sc-white);
+  }
   .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']) {
-    border-color: rgba(var(--sc-theme-rgb), 0.38);
-    color: #fff7f1;
+    border-color: rgb(var(--sc-theme-rgb) / 0.38);
+    color: var(--color-sc-white);
   }
-
-  .sc-theme-ui :where(
-      div,
-      section,
-      article,
-      header,
-      footer,
-      aside,
-      p,
-      span,
-      li,
-      ul,
-      ol
-    ):where([class~='border'], [class*='border-']) {
-    border-color: rgba(var(--sc-theme-rgb), 0.22);
+  .sc-theme-ui :where(a, select, textarea, input:not([type='range'])):where([class~='border'], [class*='border-']):hover {
+    border-color: rgb(var(--sc-theme-rgb) / 0.62);
   }
-
-  .sc-theme-ui :where(
-      a,
-      select,
-      textarea,
-      input:not([type='range'])
-    ):where([class~='border'], [class*='border-']):hover {
-    border-color: rgba(var(--sc-theme-rgb), 0.62);
-  }
-
   .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']):hover,
   .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-'])[aria-pressed='true'],
   .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-'])[aria-current='true'] {
-    border-color: rgba(var(--sc-theme-rgb), 0.68);
+    border-color: rgb(var(--sc-theme-rgb) / 0.68);
   }
-
-  .sc-theme-ui :where(
-      a,
-      select,
-      textarea,
-      input:not([type='range'])
-    ):where([class~='border'], [class*='border-']):focus-visible {
-    border-color: rgba(var(--sc-theme-rgb), 0.78);
+  .sc-theme-ui :where(a, select, textarea, input:not([type='range'])):where([class~='border'], [class*='border-']):focus-visible {
+    border-color: rgb(var(--sc-theme-rgb) / 0.78);
   }
-
   .sc-theme-ui button:not(.sc-theme-swatch):where([class~='border'], [class*='border-']):focus-visible {
-    border-color: rgba(var(--sc-theme-rgb), 0.82);
+    border-color: rgb(var(--sc-theme-rgb) / 0.82);
   }
-
   .sc-theme-ui button,
   .sc-theme-ui button svg,
-  .sc-theme-ui button span {
-    color: #fff7f1;
-  }
-
-  .slider-volumen::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    background: #f8f3ee;
-    border: 1px solid rgba(15, 15, 15, 0.85);
-    border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-    cursor: pointer;
-    height: 14px;
-    width: 14px;
-  }
-
-  .slider-volumen::-moz-range-thumb {
-    background: #f8f3ee;
-    border: 1px solid rgba(15, 15, 15, 0.85);
-    border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-    cursor: pointer;
-    height: 14px;
-    width: 14px;
-  }
-
-  .slider-volumen::-webkit-slider-runnable-track {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-  }
-
-  .slider-volumen::-moz-range-track {
-    background: transparent;
-  }
-
-  .slider-equalizer {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .slider-equalizer::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    background: #fff7f1;
-    border: 1px solid rgba(10, 10, 10, 0.82);
-    border-radius: 999px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
-    cursor: pointer;
-    height: 15px;
-    width: 15px;
-  }
-
-  .slider-equalizer::-moz-range-thumb {
-    background: #fff7f1;
-    border: 1px solid rgba(10, 10, 10, 0.82);
-    border-radius: 999px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
-    cursor: pointer;
-    height: 15px;
-    width: 15px;
-  }
-
-  .slider-equalizer::-webkit-slider-runnable-track {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    border-radius: 999px;
-    height: 8px;
-  }
-
-  .slider-equalizer::-moz-range-track {
-    background: transparent;
-    border-radius: 999px;
-    height: 8px;
-  }
+  .sc-theme-ui button span { color: var(--color-sc-white); }
 }
 
+/* =============================================================================
+ *  Accesibilidad
+ * ============================================================================= */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -271,30 +501,18 @@
 }
 
 @media (forced-colors: active) {
-  body {
-    background: Canvas;
-    color: CanvasText;
-  }
-
-  .fondo-tarjeta,
-  .portada-relleno,
-  .capa-velo,
-  .capa-trama {
-    background: Canvas;
-  }
-
-  button,
-  input,
-  select,
-  a {
+  body { background: Canvas; color: CanvasText; }
+  .sc-card,
+  .sc-cover-fill,
+  .sc-veil,
+  .sc-pattern,
+  .sc-panel-bg { background: Canvas; }
+  button, input, select, a {
     border: 1px solid ButtonText;
     forced-color-adjust: auto;
   }
-
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
-  a:focus-visible {
-    outline-color: Highlight;
-  }
+  a:focus-visible { outline-color: Highlight; }
 }

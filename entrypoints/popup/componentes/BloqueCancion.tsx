@@ -2,9 +2,6 @@ import type { EstadoCancion, RespuestaPopup } from '../../../lib/contratos';
 import type { Textos } from '../i18n';
 import { mensajeSecundario, unirClases } from '../utilidades';
 
-const CLASES_META =
-  'inline-flex max-w-full self-start rounded-[4px] border border-white/10 bg-black/75 text-left text-marfil transition duration-150 ease-out hover:-translate-y-px hover:border-[#e5e5e5]/50  disabled:cursor-default disabled:opacity-95';
-
 export function BloqueCancion(props: {
   cancion: EstadoCancion | null;
   respuesta: RespuestaPopup;
@@ -16,14 +13,15 @@ export function BloqueCancion(props: {
   const detalleEstado = mensajeSecundario(respuesta);
 
   return (
-    <section className="flex flex-1 flex-col justify-end gap-2" aria-labelledby="sc-current-track-heading">
+    <section
+      className="flex flex-1 flex-col justify-end gap-2"
+      aria-labelledby="sc-current-track-heading">
       <h2 id="sc-current-track-heading" className="sr-only">{t.reproductorActual}</h2>
 
       <button
         type="button"
         className={unirClases(
-          CLASES_META,
-          'px-2 py-1.25 text-[0.76rem] font-bold tracking-[0.08em] uppercase',
+          'sc-meta-pill self-start px-2 py-1.25 text-[0.76rem] font-bold tracking-[0.08em] uppercase',
         )}
         onClick={() => {
           void onAbrirEnlace(cancion?.urlArtista ?? null);
@@ -37,8 +35,7 @@ export function BloqueCancion(props: {
       <button
         type="button"
         className={unirClases(
-          CLASES_META,
-          'px-2.5 py-2 font-manrope text-[1.52rem] leading-[0.98] font-extrabold tracking-[-0.04em] text-balance',
+          'sc-meta-pill self-start px-2.5 py-2 font-geist text-[1.52rem] leading-[0.98] font-extrabold tracking-[-0.04em] text-balance',
         )}
         onClick={() => {
           void onAbrirEnlace(cancion?.urlCancion ?? null);
@@ -50,7 +47,7 @@ export function BloqueCancion(props: {
       </button>
 
       {detalleEstado ? (
-        <p className="m-0 max-w-62.5 text-[0.8rem] leading-[1.35] text-[rgba(255,244,234,0.82)]">
+        <p className="m-0 max-w-62.5 text-[0.8rem] leading-[1.35] text-marfil/82">
           {detalleEstado}
         </p>
       ) : null}
