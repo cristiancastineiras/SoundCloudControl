@@ -39,6 +39,7 @@ import { etiquetaEstado } from './utilidades';
 
 const CLAVE_INTERVALO = 'sc-control-intervalo';
 const CLAVE_TEMA = 'sc-control-tema';
+const CLAVE_MOSTRAR_DESCARGA_MP3 = 'sc-control-mostrar-descarga-mp3';
 const COLOR_TEMA_POR_DEFECTO = '#ff7700';
 const ID_TITULO_POPUP = 'sc-popup-title';
 const ID_ESTADO_VIVO = 'sc-popup-live-status';
@@ -87,6 +88,31 @@ function guardarColorTema(color: string) {
   }
 }
 
+function leerMostrarDescargaMp3(): boolean {
+  try {
+    const guardado = localStorage.getItem(CLAVE_MOSTRAR_DESCARGA_MP3);
+    if (guardado === 'false') {
+      return false;
+    }
+
+    if (guardado === 'true') {
+      return true;
+    }
+  } catch {
+    // sin acceso a localStorage
+  }
+
+  return true;
+}
+
+function guardarMostrarDescargaMp3(mostrar: boolean) {
+  try {
+    localStorage.setItem(CLAVE_MOSTRAR_DESCARGA_MP3, String(mostrar));
+  } catch {
+    // sin acceso a localStorage
+  }
+}
+
 function hexARgb(hex: string): Rgb {
   const valor = normalizarColorTema(hex).slice(1);
 
@@ -121,6 +147,7 @@ function AplicacionPopup() {
   const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
   const [vista, setVista] = useState<Vista>('principal');
   const [colorTema, setColorTema] = useState(leerColorTema);
+  const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(leerMostrarDescargaMp3);
   const [intervaloActualizacion, setIntervaloActualizacion] = useState(leerIntervalo);
   const [respuesta, setRespuesta] = useState<RespuestaPopup>(() => ({
     estadoVista: 'cargando',
@@ -425,6 +452,11 @@ function AplicacionPopup() {
     setIntervaloActualizacion(nuevoIntervalo);
   }
 
+  function cambiarMostrarDescargaMp3(mostrar: boolean) {
+    guardarMostrarDescargaMp3(mostrar);
+    setMostrarDescargaMp3(mostrar);
+  }
+
   const guardarEqualizador = useEffectEvent(
     async (ajustesSiguientes: AjustesEqualizador, revision: number) => {
       try {
@@ -588,11 +620,13 @@ function AplicacionPopup() {
             idioma={idioma}
             t={t}
             colorTema={colorTema}
+            mostrarDescargaMp3={mostrarDescargaMp3}
             intervalo={intervaloActualizacion}
             backButtonRef={botonVolverRef}
             onVolver={() => setVista('principal')}
             onCambiarIdioma={cambiarIdioma}
             onCambiarColor={cambiarColorTema}
+            onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
         ) : vista === 'equalizador' ? (
@@ -640,6 +674,7 @@ function AplicacionPopup() {
                 bloqueado={controlesBloqueados}
                 t={t}
                 estadoDescarga={estadoDescarga}
+                mostrarBotonDescarga={mostrarDescargaMp3}
                 onEjecutarAccion={ejecutarAccion}
                 onDescargar={descargarCancion}
               />

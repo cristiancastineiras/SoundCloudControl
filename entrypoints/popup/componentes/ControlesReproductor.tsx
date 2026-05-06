@@ -16,10 +16,11 @@ export function ControlesReproductor(props: {
   bloqueado: boolean;
   t: Textos;
   estadoDescarga: EstadoDescarga;
+  mostrarBotonDescarga: boolean;
   onEjecutarAccion: (accion: AccionReproductor) => Promise<void> | void;
   onDescargar: () => Promise<void> | void;
 }) {
-  const { bloqueado, cancion, estadoDescarga, onDescargar, onEjecutarAccion, t } = props;
+  const { bloqueado, cancion, estadoDescarga, mostrarBotonDescarga, onDescargar, onEjecutarAccion, t } = props;
   const aleatorioActivo = cancion.aleatorioActivo;
   const repeticionListaActiva = cancion.modoRepeticion === MODOS_REPETICION.lista;
   const repeticionPistaActiva = cancion.modoRepeticion === MODOS_REPETICION.pista;
@@ -203,28 +204,30 @@ export function ControlesReproductor(props: {
         </button>
       </div>
 
-      {estadoDescarga ? (
+      {mostrarBotonDescarga && estadoDescarga ? (
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {textoDescarga}
         </p>
       ) : null}
 
-      <button
-        type="button"
-        className={clasesBotonDescarga}
-        onClick={() => {
-          void onDescargar();
-        }}
-        disabled={bloqueado || estadoDescarga === 'descargando'}
-        aria-busy={estadoDescarga === 'descargando'}
-        aria-label={textoDescarga}>
-        <IconoControl
-          nombre={estadoDescarga === 'descargando' ? 'recargar' : 'descargar'}
-          weight={estadoDescarga === 'descargando' ? 'regular' : estadoDescarga === 'ok' ? 'fill' : 'regular'}
-          className={estadoDescarga === 'descargando' ? 'animate-spin' : undefined}
-        />
-        <span>{textoDescarga}</span>
-      </button>
+      {mostrarBotonDescarga ? (
+        <button
+          type="button"
+          className={clasesBotonDescarga}
+          onClick={() => {
+            void onDescargar();
+          }}
+          disabled={bloqueado || estadoDescarga === 'descargando'}
+          aria-busy={estadoDescarga === 'descargando'}
+          aria-label={textoDescarga}>
+          <IconoControl
+            nombre={estadoDescarga === 'descargando' ? 'recargar' : 'descargar'}
+            weight={estadoDescarga === 'descargando' ? 'regular' : estadoDescarga === 'ok' ? 'fill' : 'regular'}
+            className={estadoDescarga === 'descargando' ? 'animate-spin' : undefined}
+          />
+          <span>{textoDescarga}</span>
+        </button>
+      ) : null}
     </section>
   );
 }
