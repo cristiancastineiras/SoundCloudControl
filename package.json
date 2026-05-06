@@ -11,12 +11,13 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "node scripts/delete-zips.js && wxt zip -b firefox",
+    "zip:all": "node scripts/delete-zips.js && wxt zip && wxt zip -b firefox",
     "compile": "tsc --noEmit",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@fontsource/geist": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
-    "@fontsource/manrope": "^5.2.8",
     "@phosphor-icons/react": "^2.1.10",
     "btch-downloader": "^6.0.27",
     "btch-http": "^2.0.3",

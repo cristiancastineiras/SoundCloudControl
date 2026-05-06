@@ -1,6 +1,6 @@
 import { GearSix, SlidersHorizontal } from '@phosphor-icons/react';
-import type { RespuestaPopup } from '../../../lib/contratos';
 import type { ReactNode, Ref } from 'react';
+import type { RespuestaPopup } from '../../../lib/contratos';
 import type { Textos } from '../i18n';
 
 export function CabeceraPopup(props: {
@@ -66,7 +66,7 @@ function BotonCabecera(props: {
       aria-expanded={props.expanded}
       aria-controls={props.controls}
       onClick={props.onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/50 text-marfil/70 transition duration-150 hover:border-white/30 hover:text-marfil">
+      className="sc-btn-icon">
       {props.children}
     </button>
   );

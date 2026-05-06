@@ -2,6 +2,7 @@ import {
   startTransition,
   useEffect,
   useEffectEvent,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -28,6 +29,20 @@ import {
   guardarIdioma,
   obtenerIdioma,
 } from './i18n';
+import {
+  guardarColorTema,
+  hexARgb,
+  leerColorTema,
+  normalizarColorTema,
+  rgbATripleta,
+} from './tema';
+import {
+  guardarIntervalo,
+  guardarMostrarDescargaMp3,
+  leerIntervalo,
+  leerMostrarDescargaMp3,
+  type IntervaloActualizacion,
+} from './preferencias';
 import { AccionesEstado } from './componentes/AccionesEstado';
 import { BloqueCancion } from './componentes/BloqueCancion';
 import { CabeceraPopup } from './componentes/CabeceraPopup';
@@ -37,10 +52,7 @@ import { PantallaAjustes } from './componentes/PantallaAjustes';
 import { PantallaEqualizador } from './componentes/PantallaEqualizador';
 import { etiquetaEstado } from './utilidades';
 
-const CLAVE_INTERVALO = 'sc-control-intervalo';
-const CLAVE_TEMA = 'sc-control-tema';
-const CLAVE_MOSTRAR_DESCARGA_MP3 = 'sc-control-mostrar-descarga-mp3';
-const COLOR_TEMA_POR_DEFECTO = '#ff7700';
+// ---- Constantes de IDs (a11y) ----------------------------------------------
 const ID_TITULO_POPUP = 'sc-popup-title';
 const ID_ESTADO_VIVO = 'sc-popup-live-status';
 const ID_PANEL_AJUSTES = 'sc-popup-settings-panel';
@@ -48,107 +60,24 @@ const ID_AYUDA_AJUSTES = 'sc-popup-settings-help';
 const ID_PANEL_EQUALIZADOR = 'sc-popup-equalizer-panel';
 const ID_AYUDA_EQUALIZADOR = 'sc-popup-equalizer-help';
 
-type Rgb = { r: number; g: number; b: number };
-
-function leerIntervalo(): number {
-  try {
-    const v = localStorage.getItem(CLAVE_INTERVALO);
-    const n = Number(v);
-    return [2000, 4000, 8000].includes(n) ? n : 4000;
-  } catch {
-    return 4000;
-  }
-}
-
-function normalizarColorTema(valor: string | null | undefined): string {
-  if (valor === 'naranja') {
-    return COLOR_TEMA_POR_DEFECTO;
-  }
-
-  if (typeof valor === 'string' && /^#[0-9a-fA-F]{6}$/.test(valor)) {
-    return valor.toLowerCase();
-  }
-
-  return COLOR_TEMA_POR_DEFECTO;
-}
-
-function leerColorTema(): string {
-  try {
-    return normalizarColorTema(localStorage.getItem(CLAVE_TEMA));
-  } catch {
-    return COLOR_TEMA_POR_DEFECTO;
-  }
-}
-
-function guardarColorTema(color: string) {
-  try {
-    localStorage.setItem(CLAVE_TEMA, normalizarColorTema(color));
-  } catch {
-    // sin acceso a localStorage
-  }
-}
-
-function leerMostrarDescargaMp3(): boolean {
-  try {
-    const guardado = localStorage.getItem(CLAVE_MOSTRAR_DESCARGA_MP3);
-    if (guardado === 'false') {
-      return false;
-    }
-
-    if (guardado === 'true') {
-      return true;
-    }
-  } catch {
-    // sin acceso a localStorage
-  }
-
-  return true;
-}
-
-function guardarMostrarDescargaMp3(mostrar: boolean) {
-  try {
-    localStorage.setItem(CLAVE_MOSTRAR_DESCARGA_MP3, String(mostrar));
-  } catch {
-    // sin acceso a localStorage
-  }
-}
-
-function hexARgb(hex: string): Rgb {
-  const valor = normalizarColorTema(hex).slice(1);
-
-  return {
-    r: Number.parseInt(valor.slice(0, 2), 16),
-    g: Number.parseInt(valor.slice(2, 4), 16),
-    b: Number.parseInt(valor.slice(4, 6), 16),
-  };
-}
-
-function mezclarConBlanco(hex: string, factor: number): string {
-  const rgb = hexARgb(hex);
-  const mezcla = (canal: number) => {
-    const proporcion = Math.max(0, Math.min(1, factor));
-    return Math.round(canal + (255 - canal) * proporcion)
-      .toString(16)
-      .padStart(2, '0');
-  };
-
-  return `#${mezcla(rgb.r)}${mezcla(rgb.g)}${mezcla(rgb.b)}`;
-}
-
-function rgbaDesdeRgb(rgb: Rgb, alpha: number): string {
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-}
+// ---- Tiempos ---------------------------------------------------------------
+const RETARDO_RESET_DESCARGA_MS = 3000;
+const RETARDO_GUARDADO_EQ_MS = 90;
 
 type Vista = 'principal' | 'ajustes' | 'equalizador';
 type AccionInterfaz = AccionReproductor | 'abrir-soundcloud' | 'abrir-enlace';
 type EstadoDescarga = null | 'descargando' | 'ok' | 'error';
 
 function AplicacionPopup() {
+  // ---- Estado de UI --------------------------------------------------------
   const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
   const [vista, setVista] = useState<Vista>('principal');
   const [colorTema, setColorTema] = useState(leerColorTema);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(leerMostrarDescargaMp3);
-  const [intervaloActualizacion, setIntervaloActualizacion] = useState(leerIntervalo);
+  const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(leerIntervalo);
+
+  // ---- Estado de datos -----------------------------------------------------
+  const t = TEXTOS[idioma];
   const [respuesta, setRespuesta] = useState<RespuestaPopup>(() => ({
     estadoVista: 'cargando',
     cancion: null,
@@ -163,6 +92,8 @@ function AplicacionPopup() {
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
   const [guardandoEqualizador, setGuardandoEqualizador] = useState(false);
+
+  // ---- Refs ----------------------------------------------------------------
   const botonAjustesRef = useRef<HTMLButtonElement | null>(null);
   const botonEqualizadorRef = useRef<HTMLButtonElement | null>(null);
   const botonVolverRef = useRef<HTMLButtonElement | null>(null);
@@ -172,8 +103,7 @@ function AplicacionPopup() {
   const temporizadorEqualizadorRef = useRef<number | null>(null);
   const ajustesEqualizadorPendientesRef = useRef<AjustesEqualizador | null>(null);
 
-  const t = TEXTOS[idioma];
-
+  // ---- Comunicación con background ----------------------------------------
   const cargarEstado = useEffectEvent(async (silencioso = false) => {
     if (!silencioso) {
       setRespuesta((estadoActual) =>
@@ -191,11 +121,7 @@ function AplicacionPopup() {
       });
       setRespuesta(siguienteEstado);
     } catch {
-      setRespuesta({
-        estadoVista: 'error',
-        cancion: null,
-        mensaje: t.errorComunicacion,
-      });
+      setRespuesta({ estadoVista: 'error', cancion: null, mensaje: t.errorComunicacion });
     }
   });
 
@@ -215,16 +141,10 @@ function AplicacionPopup() {
         tipo: 'obtener-equalizador',
       });
 
-      if (ajustesEqualizadorPendientesRef.current) {
-        return;
-      }
-
+      if (ajustesEqualizadorPendientesRef.current) return;
       setRespuestaEqualizador(siguienteEstado);
     } catch {
-      if (ajustesEqualizadorPendientesRef.current) {
-        return;
-      }
-
+      if (ajustesEqualizadorPendientesRef.current) return;
       setRespuestaEqualizador((estadoActual) => ({
         ...estadoActual,
         estadoVista: 'error',
@@ -233,6 +153,7 @@ function AplicacionPopup() {
     }
   });
 
+  // ---- Polling -------------------------------------------------------------
   useEffect(() => {
     void cargarEstado();
     void cargarEqualizador(true);
@@ -254,22 +175,20 @@ function AplicacionPopup() {
     };
   }, [guardandoEqualizador, intervaloActualizacion, vista]);
 
+  // ---- Cargar EQ al entrar a su vista -------------------------------------
   useEffect(() => {
-    if (vista !== 'equalizador' || temporizadorEqualizadorRef.current !== null) {
-      return;
-    }
-
+    if (vista !== 'equalizador' || temporizadorEqualizadorRef.current !== null) return;
     void cargarEqualizador();
   }, [vista]);
 
-  useEffect(() => {
-    return () => {
-      if (temporizadorEqualizadorRef.current !== null) {
-        window.clearTimeout(temporizadorEqualizadorRef.current);
-      }
-    };
+  // ---- Limpiar temporizador del EQ al desmontar ---------------------------
+  useEffect(() => () => {
+    if (temporizadorEqualizadorRef.current !== null) {
+      window.clearTimeout(temporizadorEqualizadorRef.current);
+    }
   }, []);
 
+  // ---- Sync de idioma + título de la pestaña ------------------------------
   useEffect(() => {
     document.documentElement.lang = idioma;
     document.title =
@@ -280,60 +199,50 @@ function AplicacionPopup() {
           : t.appNombre;
   }, [idioma, t, vista]);
 
+  // ---- Gestión de foco al cambiar de vista --------------------------------
   useEffect(() => {
     const vistaAnterior = vistaAnteriorRef.current;
-
-    if (vista === 'ajustes') {
-      botonVolverRef.current?.focus();
-    } else if (vista === 'equalizador') {
-      botonVolverEqualizadorRef.current?.focus();
-    } else if (vistaAnterior === 'ajustes') {
-      botonAjustesRef.current?.focus();
-    } else if (vistaAnterior === 'equalizador') {
-      botonEqualizadorRef.current?.focus();
-    }
-
+    if (vista === 'ajustes') botonVolverRef.current?.focus();
+    else if (vista === 'equalizador') botonVolverEqualizadorRef.current?.focus();
+    else if (vistaAnterior === 'ajustes') botonAjustesRef.current?.focus();
+    else if (vistaAnterior === 'equalizador') botonEqualizadorRef.current?.focus();
     vistaAnteriorRef.current = vista;
   }, [vista]);
 
+  // ---- Cierre con Escape ---------------------------------------------------
   useEffect(() => {
-    if (vista === 'principal') {
-      return undefined;
-    }
-
+    if (vista === 'principal') return undefined;
     const alPulsarTecla = (evento: KeyboardEvent) => {
-      if (evento.key !== 'Escape') {
-        return;
-      }
-
+      if (evento.key !== 'Escape') return;
       evento.preventDefault();
       setVista('principal');
     };
-
     window.addEventListener('keydown', alPulsarTecla);
     return () => {
       window.removeEventListener('keydown', alPulsarTecla);
     };
   }, [vista]);
 
+  // ---- Derivados de render -------------------------------------------------
   const cancion = respuesta.cancion;
   const equalizador = respuestaEqualizador.equalizador;
   const portada = obtenerImagenGrande(cancion?.urlImagen ?? null);
-  const rgbTema = hexARgb(colorTema);
   const controlesBloqueados =
     accionEnCurso !== null || respuesta.estadoVista !== 'disponible';
-  const estiloTarjeta = {
-    background: `radial-gradient(circle at top left, ${rgbaDesdeRgb(rgbTema, 0.32)}, transparent 32%), linear-gradient(145deg, #121212 0%, #050505 58%, #19130f 100%)`,
-    ['--sc-theme-rgb' as string]: `${rgbTema.r} ${rgbTema.g} ${rgbTema.b}`,
-  } as CSSProperties;
-  const estiloBarraTema: CSSProperties = {
-    backgroundImage: `linear-gradient(90deg, ${mezclarConBlanco(colorTema, 0.04)} 0%, ${mezclarConBlanco(colorTema, 0.18)} 62%, ${mezclarConBlanco(colorTema, 0.56)} 100%)`,
-  };
+
+  // El gradiente de la tarjeta lo aporta `.sc-card`; aquí solo inyectamos el
+  // RGB del tema activo en una variable CSS para que toda la cascada reaccione.
+  const variablesTema = useMemo<CSSProperties>(() => {
+    const rgb = hexARgb(colorTema);
+    return { ['--sc-theme-rgb' as string]: rgbATripleta(rgb) } as CSSProperties;
+  }, [colorTema]);
+
   const estadoInteractivoCargando =
     respuesta.estadoVista === 'cargando' ||
     accionEnCurso !== null ||
     estadoDescarga === 'descargando' ||
     guardandoEqualizador;
+
   const textoEstadoDescarga =
     estadoDescarga === 'descargando'
       ? t.descargando
@@ -342,12 +251,14 @@ function AplicacionPopup() {
         : estadoDescarga === 'error'
           ? t.descargaError
           : '';
+
   const resumenEstadoEqualizador = [
     t.equalizador,
     respuestaEqualizador.mensaje,
     equalizador.habilitado ? t.eqActivado : t.eqDesactivado,
     equalizador.audioDetectado ? t.eqAudioDetectado : t.eqAudioNoDetectado,
   ].join('. ');
+
   const resumenEstadoEnVivo =
     vista === 'equalizador'
       ? resumenEstadoEqualizador
@@ -361,11 +272,13 @@ function AplicacionPopup() {
               t.volumenActual(cancion.volumen),
             ].join('. ')
           : [etiquetaEstado(respuesta, t), respuesta.mensaje].filter(Boolean).join('. '));
+
   const anuncioUrgente =
     respuesta.estadoVista === 'error' ||
     estadoDescarga === 'error' ||
     respuestaEqualizador.estadoVista === 'error';
 
+  // ---- Acciones ------------------------------------------------------------
   async function ejecutarAccion(accion: AccionReproductor) {
     setAccionEnCurso(accion);
     try {
@@ -427,7 +340,7 @@ function AplicacionPopup() {
     } catch {
       setEstadoDescarga('error');
     } finally {
-      setTimeout(() => setEstadoDescarga(null), 3000);
+      setTimeout(() => setEstadoDescarga(null), RETARDO_RESET_DESCARGA_MS);
     }
   }
 
@@ -442,14 +355,9 @@ function AplicacionPopup() {
     setColorTema(colorNormalizado);
   }
 
-  function cambiarIntervaloActualizacion(nuevoIntervalo: number) {
-    try {
-      localStorage.setItem(CLAVE_INTERVALO, String(nuevoIntervalo));
-    } catch {
-      // sin acceso a localStorage
-    }
-
-    setIntervaloActualizacion(nuevoIntervalo);
+  function cambiarIntervaloActualizacion(nuevo: IntervaloActualizacion) {
+    guardarIntervalo(nuevo);
+    setIntervaloActualizacion(nuevo);
   }
 
   function cambiarMostrarDescargaMp3(mostrar: boolean) {
@@ -457,6 +365,7 @@ function AplicacionPopup() {
     setMostrarDescargaMp3(mostrar);
   }
 
+  // ---- Equalizador (debounce de guardado) ---------------------------------
   const guardarEqualizador = useEffectEvent(
     async (ajustesSiguientes: AjustesEqualizador, revision: number) => {
       try {
@@ -470,18 +379,14 @@ function AplicacionPopup() {
         if (
           revision !== revisionEqualizadorRef.current ||
           ajustesEqualizadorPendientesRef.current
-        ) {
-          return;
-        }
+        ) return;
 
         setRespuestaEqualizador(siguienteEstado);
       } catch {
         if (
           revision !== revisionEqualizadorRef.current ||
           ajustesEqualizadorPendientesRef.current
-        ) {
-          return;
-        }
+        ) return;
 
         setRespuestaEqualizador((estadoActual) => ({
           ...estadoActual,
@@ -526,7 +431,6 @@ function AplicacionPopup() {
 
     temporizadorEqualizadorRef.current = window.setTimeout(() => {
       temporizadorEqualizadorRef.current = null;
-
       const pendientes = ajustesEqualizadorPendientesRef.current;
       ajustesEqualizadorPendientesRef.current = null;
 
@@ -538,23 +442,18 @@ function AplicacionPopup() {
       if (revision === revisionEqualizadorRef.current) {
         setGuardandoEqualizador(false);
       }
-    }, 90);
+    }, RETARDO_GUARDADO_EQ_MS);
   }
 
   function actualizarEqualizador(
     transformador: (actual: AjustesEqualizador) => AjustesEqualizador,
   ) {
-    const ajustesActuales = normalizarAjustesEqualizador(respuestaEqualizador.equalizador);
-    const ajustesSiguientes = normalizarAjustesEqualizador(transformador(ajustesActuales));
-
-    programarGuardadoEqualizador(ajustesSiguientes);
+    const actuales = normalizarAjustesEqualizador(respuestaEqualizador.equalizador);
+    programarGuardadoEqualizador(normalizarAjustesEqualizador(transformador(actuales)));
   }
 
   function cambiarHabilitadoEqualizador(habilitado: boolean) {
-    actualizarEqualizador((actual) => ({
-      ...actual,
-      habilitado,
-    }));
+    actualizarEqualizador((actual) => ({ ...actual, habilitado }));
   }
 
   function cambiarPreampEqualizador(valor: number) {
@@ -569,31 +468,25 @@ function AplicacionPopup() {
     actualizarEqualizador((actual) => ({
       ...actual,
       presetId: 'personalizado',
-      bandas: {
-        ...actual.bandas,
-        [id]: valor,
-      },
+      bandas: { ...actual.bandas, [id]: valor },
     }));
   }
 
   function aplicarPresetEqualizador(presetId: IdPresetEqualizador) {
-    const base = crearAjustesEqualizadorDesdePreset(presetId);
-
     programarGuardadoEqualizador({
-      ...base,
+      ...crearAjustesEqualizadorDesdePreset(presetId),
       habilitado: true,
     });
   }
 
   function restablecerEqualizador() {
-    const base = crearAjustesEqualizadorDesdePreset('flat');
-
     programarGuardadoEqualizador({
-      ...base,
+      ...crearAjustesEqualizadorDesdePreset('flat'),
       habilitado: respuestaEqualizador.equalizador.habilitado,
     });
   }
 
+  // ---- Render --------------------------------------------------------------
   return (
     <main className="relative w-full" aria-labelledby={ID_TITULO_POPUP}>
       <h1 id={ID_TITULO_POPUP} className="sr-only">{t.appNombre}</h1>
@@ -607,10 +500,9 @@ function AplicacionPopup() {
       </p>
 
       <section
-        className="fondo-tarjeta sombra-tarjeta sc-theme-ui relative overflow-hidden"
-        style={estiloTarjeta}
+        className="sc-card sc-theme-ui"
+        style={variablesTema}
         aria-busy={estadoInteractivoCargando}>
-        {/* <div className="absolute left-0 top-0 z-20 h-1 w-full" style={estiloBarraTema} /> */}
         <FondoPortada portada={portada} />
 
         {vista === 'ajustes' ? (
@@ -700,4 +592,3 @@ async function enviarMensaje<TRespuesta>(mensaje: SolicitudPopup) {
 }
 
 export default AplicacionPopup;
-
