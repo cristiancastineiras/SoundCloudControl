@@ -3,10 +3,10 @@
  *
  * Agrupa en un solo módulo:
  *   - Constantes de la paleta secundaria oficial de SoundCloud (Media Kit).
- *   - Persistencia en localStorage.
  *   - Helpers de conversión (hex → RGB, mezcla con blanco, etc.).
  *
- * Mantenerlo aquí evita duplicar la lógica entre App.tsx y los componentes
+ * Mantenerlo aquí evita duplicar la lógica entre la capa de persistencia,
+ * App.tsx y los componentes
  * que necesitan color de tema (PantallaAjustes, ControlesReproductor…).
  */
 
@@ -29,8 +29,6 @@ export const COLORES_TEMA_PRESET = [
 
 export type ColorTemaPreset = (typeof COLORES_TEMA_PRESET)[number];
 
-const CLAVE_TEMA = 'sc-control-tema';
-
 export type Rgb = { r: number; g: number; b: number };
 
 export function normalizarColorTema(valor: string | null | undefined): string {
@@ -42,22 +40,6 @@ export function normalizarColorTema(valor: string | null | undefined): string {
   }
 
   return COLOR_TEMA_POR_DEFECTO;
-}
-
-export function leerColorTema(): string {
-  try {
-    return normalizarColorTema(localStorage.getItem(CLAVE_TEMA));
-  } catch {
-    return COLOR_TEMA_POR_DEFECTO;
-  }
-}
-
-export function guardarColorTema(color: string): void {
-  try {
-    localStorage.setItem(CLAVE_TEMA, normalizarColorTema(color));
-  } catch {
-    /* sin acceso a localStorage */
-  }
 }
 
 export function hexARgb(hex: string): Rgb {

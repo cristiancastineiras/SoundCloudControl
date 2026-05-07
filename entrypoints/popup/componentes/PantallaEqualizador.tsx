@@ -139,7 +139,7 @@ export function PantallaEqualizador(props: {
             max={GANANCIA_EQUALIZADOR_MAX}
             step={PASO_EQUALIZADOR}
             value={estado.preamp}
-            onChange={(evento) => onCambiarPreamp(Number(evento.target.value))}
+            onChange={(evento) => onCambiarPreamp(Number(evento.currentTarget.value))}
             aria-labelledby={preampId}
             aria-label={t.eqPreampActual(estado.preamp)}
             className="slider-equalizer h-2 w-full appearance-none rounded-full border border-transparent"
@@ -168,7 +168,7 @@ export function PantallaEqualizador(props: {
                   max={GANANCIA_EQUALIZADOR_MAX}
                   step={PASO_EQUALIZADOR}
                   value={valor}
-                  onChange={(evento) => onCambiarBanda(banda.id, Number(evento.target.value))}
+                  onChange={(evento) => onCambiarBanda(banda.id, Number(evento.currentTarget.value))}
                   aria-label={t.eqGananciaActual(banda.etiqueta, valor)}
                   className="slider-equalizer h-2 w-full appearance-none rounded-full border border-transparent"
                   style={estiloSlider(valor)}

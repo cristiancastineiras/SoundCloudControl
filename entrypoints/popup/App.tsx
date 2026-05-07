@@ -1,7 +1,6 @@
 import {
-  startTransition,
+  useCallback,
   useEffect,
-  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -30,28 +29,26 @@ import { obtenerImagenGrande } from '../../lib/soundcloud';
 import {
   type Idioma,
   TEXTOS,
-  guardarIdioma,
-  obtenerIdioma,
   type Textos,
 } from './i18n';
 import {
-  guardarColorTema,
   hexARgb,
-  leerColorTema,
   normalizarColorTema,
   rgbATripleta,
 } from './tema';
 import {
+  type IntervaloActualizacion,
+} from './preferencias';
+import {
+  guardarColorTema,
+  guardarIdioma,
   guardarIntervalo,
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
   guardarVersionNotifVista,
-  leerIntervalo,
-  leerModoCompacto,
-  leerMostrarDescargaMp3,
   leerVersionNotifVista,
-  type IntervaloActualizacion,
-} from './preferencias';
+  type PreferenciasPersistidas,
+} from './storage';
 import { AccionesEstado } from './componentes/AccionesEstado';
 import { BloqueCancion } from './componentes/BloqueCancion';
 import { CabeceraPopup } from './componentes/CabeceraPopup';
@@ -78,14 +75,16 @@ type Vista = 'principal' | 'ajustes' | 'equalizador';
 type AccionInterfaz = AccionReproductor | 'abrir-soundcloud' | 'abrir-enlace';
 type EstadoDescarga = null | 'descargando' | 'ok' | 'error';
 
-function AplicacionPopup() {
+function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas }) {
+  const { preferenciasIniciales } = props;
+
   // ---- Estado de UI --------------------------------------------------------
-  const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
+  const [idioma, setIdioma] = useState<Idioma>(preferenciasIniciales.idioma);
   const [vista, setVista] = useState<Vista>('principal');
-  const [colorTema, setColorTema] = useState(leerColorTema);
-  const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(leerMostrarDescargaMp3);
-  const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(leerIntervalo);
-  const [modoCompacto, setModoCompacto] = useState(leerModoCompacto);
+  const [colorTema, setColorTema] = useState(preferenciasIniciales.colorTema);
+  const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
+  const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
+  const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
   const [versionLatest, setVersionLatest] = useState<string | null>(null);
   const [notifActualizacionVisible, setNotifActualizacionVisible] = useState(false);
 
@@ -94,13 +93,13 @@ function AplicacionPopup() {
   const [respuesta, setRespuesta] = useState<RespuestaPopup>(() => ({
     estadoVista: 'cargando',
     cancion: null,
-    mensaje: TEXTOS[obtenerIdioma()].cargando,
+    mensaje: TEXTOS[preferenciasIniciales.idioma].cargando,
   }));
   const [respuestaEqualizador, setRespuestaEqualizador] = useState<RespuestaEqualizador>(() => ({
     tipo: 'equalizador',
     estadoVista: 'cargando',
     equalizador: crearEstadoEqualizador(),
-    mensaje: TEXTOS[obtenerIdioma()].eqCargando,
+    mensaje: TEXTOS[preferenciasIniciales.idioma].eqCargando,
   }));
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
@@ -117,7 +116,7 @@ function AplicacionPopup() {
   const ajustesEqualizadorPendientesRef = useRef<AjustesEqualizador | null>(null);
 
   // ---- Comunicación con background ----------------------------------------
-  const cargarEstado = useEffectEvent(async (silencioso = false) => {
+  const cargarEstado = useEventCallback(async (silencioso = false) => {
     if (!silencioso) {
       setRespuesta((estadoActual) =>
         estadoActual.estadoVista === 'disponible'
@@ -138,7 +137,7 @@ function AplicacionPopup() {
     }
   });
 
-  const cargarEqualizador = useEffectEvent(async (silencioso = false) => {
+  const cargarEqualizador = useEventCallback(async (silencioso = false) => {
     if (!silencioso) {
       setRespuestaEqualizador((estadoActual) => ({
         ...estadoActual,
@@ -214,7 +213,7 @@ function AplicacionPopup() {
         const tagLatest = (datos.tag_name ?? '').replace(/^v/, '');
         if (!tagLatest) return;
         const versionActual = browser.runtime.getManifest().version;
-        const vistaDismissed = leerVersionNotifVista();
+        const vistaDismissed = await leerVersionNotifVista();
         if (esVersionMayor(tagLatest, versionActual) && vistaDismissed !== tagLatest) {
           setVersionLatest(tagLatest);
           setNotifActualizacionVisible(true);
@@ -388,38 +387,38 @@ function AplicacionPopup() {
   }
 
   function cambiarIdioma(nuevoIdioma: Idioma) {
-    guardarIdioma(nuevoIdioma);
+    void guardarIdioma(nuevoIdioma);
     setIdioma(nuevoIdioma);
   }
 
   function cambiarColorTema(nuevoColor: string) {
     const colorNormalizado = normalizarColorTema(nuevoColor);
-    guardarColorTema(colorNormalizado);
+    void guardarColorTema(colorNormalizado);
     setColorTema(colorNormalizado);
   }
 
   function cambiarIntervaloActualizacion(nuevo: IntervaloActualizacion) {
-    guardarIntervalo(nuevo);
+    void guardarIntervalo(nuevo);
     setIntervaloActualizacion(nuevo);
   }
 
   function cambiarMostrarDescargaMp3(mostrar: boolean) {
-    guardarMostrarDescargaMp3(mostrar);
+    void guardarMostrarDescargaMp3(mostrar);
     setMostrarDescargaMp3(mostrar);
   }
 
   function cambiarModoCompacto(compacto: boolean) {
-    guardarModoCompacto(compacto);
+    void guardarModoCompacto(compacto);
     setModoCompacto(compacto);
   }
 
   function descartarNotifActualizacion() {
-    if (versionLatest) guardarVersionNotifVista(versionLatest);
+    if (versionLatest) void guardarVersionNotifVista(versionLatest);
     setNotifActualizacionVisible(false);
   }
 
   // ---- Equalizador (debounce de guardado) ---------------------------------
-  const guardarEqualizador = useEffectEvent(
+  const guardarEqualizador = useEventCallback(
     async (ajustesSiguientes: AjustesEqualizador, revision: number) => {
       try {
         const siguienteEstado = await enviarMensaje<RespuestaEqualizador>({
@@ -467,16 +466,14 @@ function AplicacionPopup() {
     ajustesEqualizadorPendientesRef.current = ajustesNormalizados;
     setGuardandoEqualizador(true);
 
-    startTransition(() => {
-      setRespuestaEqualizador((estadoActual) => ({
-        ...estadoActual,
-        equalizador: crearEstadoEqualizador({
-          ...estadoActual.equalizador,
-          ...ajustesNormalizados,
-          bandas: ajustesNormalizados.bandas,
-        }),
-      }));
-    });
+    setRespuestaEqualizador((estadoActual) => ({
+      ...estadoActual,
+      equalizador: crearEstadoEqualizador({
+        ...estadoActual.equalizador,
+        ...ajustesNormalizados,
+        bandas: ajustesNormalizados.bandas,
+      }),
+    }));
 
     if (temporizadorEqualizadorRef.current !== null) {
       window.clearTimeout(temporizadorEqualizadorRef.current);
@@ -789,6 +786,13 @@ function esVersionMayor(a: string, b: string): boolean {
   if (aMa !== bMa) return aMa > bMa;
   if (aMi !== bMi) return aMi > bMi;
   return aPa > bPa;
+}
+
+function useEventCallback<T extends (...args: never[]) => unknown>(callback: T): T {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  return useCallback(((...args: Parameters<T>) => callbackRef.current(...args)) as T, []);
 }
 
 function ControlesCompactos(props: {

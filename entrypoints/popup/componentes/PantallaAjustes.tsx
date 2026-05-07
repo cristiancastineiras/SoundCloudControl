@@ -294,7 +294,7 @@ function SelectAjuste<T extends string>(props: {
       <select
         id={props.id}
         value={props.value}
-        onChange={(event) => props.onChange(event.target.value as T)}
+        onChange={(event) => props.onChange(event.currentTarget.value as T)}
         aria-labelledby={props.labelledBy}
         aria-describedby={props.describedBy}
         className="sc-select">
@@ -377,7 +377,7 @@ function SelectorColor(props: {
         <input
           type="color"
           value={valor}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(event.currentTarget.value)}
           aria-label={usandoPersonalizado ? t.colorTemaActual(valor) : t.colorTemaPersonalizado}
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
