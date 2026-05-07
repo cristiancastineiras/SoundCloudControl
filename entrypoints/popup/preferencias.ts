@@ -1,92 +1,18 @@
 /**
- * Preferencias persistentes del popup (no relacionadas con el tema de color).
+ * Preferencias del popup (no relacionadas con el tema de color).
  *
- * Centraliza el acceso a localStorage en helpers tipados para evitar lecturas
- * y escrituras desperdigadas por App.tsx y los componentes.
+ * Agrupa los valores por defecto y helpers de validación para que la capa de
+ * persistencia pueda reutilizarlos sin duplicar reglas.
  */
-
-const CLAVE_INTERVALO = 'sc-control-intervalo';
-const CLAVE_MOSTRAR_DESCARGA_MP3 = 'sc-control-mostrar-descarga-mp3';
 
 export const INTERVALOS_ACTUALIZACION = [2000, 4000, 8000] as const;
 export type IntervaloActualizacion = (typeof INTERVALOS_ACTUALIZACION)[number];
 
-const INTERVALO_POR_DEFECTO: IntervaloActualizacion = 4000;
+export const INTERVALO_POR_DEFECTO: IntervaloActualizacion = 4000;
+export const MOSTRAR_DESCARGA_MP3_POR_DEFECTO = true;
+export const MODO_COMPACTO_POR_DEFECTO = false;
+export const VERSION_NOTIF_VISTA_POR_DEFECTO = '';
 
-function esIntervaloValido(valor: number): valor is IntervaloActualizacion {
+export function esIntervaloValido(valor: number): valor is IntervaloActualizacion {
   return (INTERVALOS_ACTUALIZACION as readonly number[]).includes(valor);
-}
-
-export function leerIntervalo(): IntervaloActualizacion {
-  try {
-    const valor = Number(localStorage.getItem(CLAVE_INTERVALO));
-    return esIntervaloValido(valor) ? valor : INTERVALO_POR_DEFECTO;
-  } catch {
-    return INTERVALO_POR_DEFECTO;
-  }
-}
-
-export function guardarIntervalo(intervalo: IntervaloActualizacion): void {
-  try {
-    localStorage.setItem(CLAVE_INTERVALO, String(intervalo));
-  } catch {
-    /* sin acceso a localStorage */
-  }
-}
-
-export function leerMostrarDescargaMp3(): boolean {
-  try {
-    const guardado = localStorage.getItem(CLAVE_MOSTRAR_DESCARGA_MP3);
-    if (guardado === 'false') return false;
-    if (guardado === 'true') return true;
-  } catch {
-    /* sin acceso a localStorage */
-  }
-  return true;
-}
-
-export function guardarMostrarDescargaMp3(mostrar: boolean): void {
-  try {
-    localStorage.setItem(CLAVE_MOSTRAR_DESCARGA_MP3, String(mostrar));
-  } catch {
-    /* sin acceso a localStorage */
-  }
-}
-
-// ---- Modo compacto ---------------------------------------------------------
-const CLAVE_MODO_COMPACTO = 'sc-control-modo-compacto';
-
-export function leerModoCompacto(): boolean {
-  try {
-    return localStorage.getItem(CLAVE_MODO_COMPACTO) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-export function guardarModoCompacto(compacto: boolean): void {
-  try {
-    localStorage.setItem(CLAVE_MODO_COMPACTO, String(compacto));
-  } catch {
-    /* sin acceso a localStorage */
-  }
-}
-
-// ---- Notificación de versión -----------------------------------------------
-const CLAVE_VERSION_NOTIF_VISTA = 'sc-control-version-notif-vista';
-
-export function leerVersionNotifVista(): string {
-  try {
-    return localStorage.getItem(CLAVE_VERSION_NOTIF_VISTA) ?? '';
-  } catch {
-    return '';
-  }
-}
-
-export function guardarVersionNotifVista(version: string): void {
-  try {
-    localStorage.setItem(CLAVE_VERSION_NOTIF_VISTA, version);
-  } catch {
-    /* sin acceso a localStorage */
-  }
 }

@@ -1,24 +1,8 @@
 export type Idioma = 'es' | 'en';
 
-const CLAVE_STORAGE = 'sc-control-idioma';
-
-export function obtenerIdioma(): Idioma {
-  try {
-    const guardado = localStorage.getItem(CLAVE_STORAGE);
-    if (guardado === 'es' || guardado === 'en') return guardado;
-    const navegador = navigator.language.slice(0, 2).toLowerCase();
-    return navegador === 'es' ? 'es' : 'en';
-  } catch {
-    return 'en';
-  }
-}
-
-export function guardarIdioma(idioma: Idioma) {
-  try {
-    localStorage.setItem(CLAVE_STORAGE, idioma);
-  } catch {
-    // sin acceso a localStorage
-  }
+export function obtenerIdiomaNavegador(): Idioma {
+  const navegador = navigator.language.slice(0, 2).toLowerCase();
+  return navegador === 'es' ? 'es' : 'en';
 }
 
 export const TEXTOS = {

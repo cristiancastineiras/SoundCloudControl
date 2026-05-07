@@ -1,30 +1,32 @@
 import { useMemo, useState, useEffect, type CSSProperties } from 'react';
-import { type Idioma, TEXTOS, guardarIdioma, obtenerIdioma } from '../popup/i18n';
+import { type Idioma, TEXTOS } from '../popup/i18n';
 import {
-  guardarColorTema,
   hexARgb,
-  leerColorTema,
   normalizarColorTema,
   rgbATripleta,
 } from '../popup/tema';
 import {
+  type IntervaloActualizacion,
+} from '../popup/preferencias';
+import {
+  guardarColorTema,
+  guardarIdioma,
   guardarIntervalo,
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
-  leerIntervalo,
-  leerModoCompacto,
-  leerMostrarDescargaMp3,
-  type IntervaloActualizacion,
-} from '../popup/preferencias';
+  type PreferenciasPersistidas,
+} from '../popup/storage';
 import { PantallaAjustes } from '../popup/componentes/PantallaAjustes';
 
-export default function OpcionesApp() {
-  const [idioma, setIdioma] = useState<Idioma>(obtenerIdioma);
-  const [colorTema, setColorTema] = useState(leerColorTema);
-  const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(leerMostrarDescargaMp3);
+export default function OpcionesApp(props: { preferenciasIniciales: PreferenciasPersistidas }) {
+  const { preferenciasIniciales } = props;
+
+  const [idioma, setIdioma] = useState<Idioma>(preferenciasIniciales.idioma);
+  const [colorTema, setColorTema] = useState(preferenciasIniciales.colorTema);
+  const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
   const [intervaloActualizacion, setIntervaloActualizacion] =
-    useState<IntervaloActualizacion>(leerIntervalo);
-  const [modoCompacto, setModoCompacto] = useState(leerModoCompacto);
+    useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
+  const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
 
   const t = TEXTOS[idioma];
 
@@ -39,28 +41,28 @@ export default function OpcionesApp() {
   }, [colorTema]);
 
   function cambiarIdioma(nuevoIdioma: Idioma) {
-    guardarIdioma(nuevoIdioma);
+    void guardarIdioma(nuevoIdioma);
     setIdioma(nuevoIdioma);
   }
 
   function cambiarColorTema(nuevoColor: string) {
     const normalizado = normalizarColorTema(nuevoColor);
-    guardarColorTema(normalizado);
+    void guardarColorTema(normalizado);
     setColorTema(normalizado);
   }
 
   function cambiarIntervalo(nuevo: IntervaloActualizacion) {
-    guardarIntervalo(nuevo);
+    void guardarIntervalo(nuevo);
     setIntervaloActualizacion(nuevo);
   }
 
   function cambiarMostrarDescargaMp3(mostrar: boolean) {
-    guardarMostrarDescargaMp3(mostrar);
+    void guardarMostrarDescargaMp3(mostrar);
     setMostrarDescargaMp3(mostrar);
   }
 
   function cambiarModoCompacto(compacto: boolean) {
-    guardarModoCompacto(compacto);
+    void guardarModoCompacto(compacto);
     setModoCompacto(compacto);
   }
 
