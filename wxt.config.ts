@@ -15,6 +15,7 @@ export default defineConfig({
       '*://*.soundcloud.com/*',
       '*://backend1.tioo.eu.org/*',
       '*://api-v2.soundcloud.com/*',
+      '*://api.github.com/*',
     ],
     icons: {
       '16': 'icon/16.png',

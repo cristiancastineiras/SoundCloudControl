@@ -138,6 +138,11 @@ export const TEXTOS = {
     ocultar: 'Ocultar',
     temaNaranja: 'Naranja (por defecto)',
     guardado: 'Guardado',
+    modoCompacto: 'Modo compacto',
+    modoCompactoDesc: 'Muestra portada, título y artista en una fila para reducir la altura del popup.',
+    nuevaVersionDisponible: (version: string) => `Nueva versión disponible: v${version}`,
+    actualizar: 'Actualizar',
+    cerrarNotificacion: 'Cerrar notificación de actualización',
 
     // descarga
     descargarMp3: 'Descargar MP3',
@@ -255,6 +260,11 @@ export const TEXTOS = {
     ocultar: 'Hide',
     temaNaranja: 'Orange (default)',
     guardado: 'Saved',
+    modoCompacto: 'Compact mode',
+    modoCompactoDesc: 'Shows cover, title and artist in a row to reduce popup height.',
+    nuevaVersionDisponible: (version: string) => `New version available: v${version}`,
+    actualizar: 'Update',
+    cerrarNotificacion: 'Dismiss update notification',
 
     // download
     descargarMp3: 'Download MP3',

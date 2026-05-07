@@ -52,3 +52,41 @@ export function guardarMostrarDescargaMp3(mostrar: boolean): void {
     /* sin acceso a localStorage */
   }
 }
+
+// ---- Modo compacto ---------------------------------------------------------
+const CLAVE_MODO_COMPACTO = 'sc-control-modo-compacto';
+
+export function leerModoCompacto(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_MODO_COMPACTO) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function guardarModoCompacto(compacto: boolean): void {
+  try {
+    localStorage.setItem(CLAVE_MODO_COMPACTO, String(compacto));
+  } catch {
+    /* sin acceso a localStorage */
+  }
+}
+
+// ---- Notificación de versión -----------------------------------------------
+const CLAVE_VERSION_NOTIF_VISTA = 'sc-control-version-notif-vista';
+
+export function leerVersionNotifVista(): string {
+  try {
+    return localStorage.getItem(CLAVE_VERSION_NOTIF_VISTA) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function guardarVersionNotifVista(version: string): void {
+  try {
+    localStorage.setItem(CLAVE_VERSION_NOTIF_VISTA, version);
+  } catch {
+    /* sin acceso a localStorage */
+  }
+}

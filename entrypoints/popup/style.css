@@ -89,6 +89,16 @@
     width: 312px;
   }
 
+  body.sc-compact {
+    width: 480px;
+    min-width: 480px;
+  }
+
+  body[data-page='options'] {
+    width: 100%;
+    min-width: 0;
+  }
+
   button, input, textarea, select, a { font: inherit; }
 
   button:focus-visible,
@@ -336,6 +346,63 @@
     border-color: rgb(var(--sc-theme-rgb) / 0.58);
     box-shadow: none;
     color: var(--color-sc-white);
+  }
+
+  /* Botón compacto XS (modo compacto) — mismo estilo visual que sc-btn/sc-btn-mode pero pequeño */
+  .sc-btn-xs {
+    align-items: center;
+    backdrop-filter: blur(6px);
+    background-color: rgb(0 0 0 / 0.7);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: var(--sc-radius-md); /* 14 px, igual que sc-btn */
+    color: var(--color-sc-white);
+    display: inline-flex;
+    height: 2rem;   /* 32 px */
+    justify-content: center;
+    transition: transform 150ms ease-out, border-color 150ms ease-out,
+      background-color 150ms ease-out, background-image 150ms ease-out,
+      color 150ms ease-out;
+    width: 2rem;
+  }
+  .sc-btn-xs:hover:not(:disabled) {
+    border-color: rgb(229 229 229 / 0.6);
+    transform: translateY(-1px);
+  }
+  .sc-btn-xs:disabled { cursor: wait; opacity: 0.65; }
+  /* Estado activo (toggle) — igual que sc-btn-mode[data-active='true'] */
+  .sc-btn-xs[data-active='true'] {
+    background-color: transparent;
+    background-image: linear-gradient(180deg,
+      rgb(var(--sc-theme-rgb) / 0.34),
+      rgb(var(--sc-theme-rgb) / 0.16));
+    border-color: rgb(var(--sc-theme-rgb) / 0.72);
+    box-shadow:
+      0 0 0 1px rgb(var(--sc-theme-rgb) / 0.24),
+      0 10px 24px rgb(var(--sc-theme-rgb) / 0.18);
+    color: #fff2e8;
+  }
+  /* Variante soft (like, mute) */
+  .sc-btn-xs[data-active='true'][data-variant='soft'] {
+    background-image: none;
+    background-color: rgb(var(--sc-theme-rgb) / 0.2);
+    border-color: rgb(var(--sc-theme-rgb) / 0.58);
+    box-shadow: none;
+    color: var(--color-sc-white);
+  }
+
+  /* Variante primaria — play/pausa */
+  .sc-btn-xs-primary {
+    background-image: linear-gradient(135deg,
+      rgb(var(--sc-theme-rgb) / 0.92) 0%,
+      rgb(var(--sc-theme-rgb) / 0.62) 100%);
+    background-color: transparent;
+    border-color: rgb(var(--sc-theme-rgb) / 0.4);
+    color: #140800;
+    height: 2.25rem; /* 36 px — ligeramente mayor que el resto */
+    width: 2.25rem;
+  }
+  .sc-btn-xs-primary:hover:not(:disabled) {
+    border-color: rgb(var(--sc-theme-rgb) / 0.78);
   }
 
   /* Botón de descarga MP3 (variantes por estado) */
