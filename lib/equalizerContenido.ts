@@ -36,6 +36,16 @@ export function crearGestorEqualizadorContenido() {
       bridgeDisponible = true;
       logEq('bridge-listo', { canal: CANAL_LISTO_EQUALIZADOR });
     }
+
+    // Si la inicialización aún no arrancó o falló antes (el bridge llegó tarde
+    // p.ej. Chrome inyectó el MAIN-world script después del timeout inicial),
+    // lanzamos una nueva inicialización ahora que ya sabemos que el bridge vive.
+    if (!inicializacion) {
+      inicializacion = inicializarInterno().catch((error) => {
+        inicializacion = null;
+        errorEq('reinicializacion-listo-fallo', error);
+      });
+    }
   });
 
   function resumirAjustes(origen: AjustesEqualizador) {
@@ -268,7 +278,13 @@ export function crearGestorEqualizadorContenido() {
 
   async function asegurarInicializado() {
     if (!inicializacion) {
-      inicializacion = inicializarInterno();
+      inicializacion = inicializarInterno().catch((error) => {
+        // Resetear para permitir reintento en la próxima llamada o cuando
+        // el bridge envíe el mensaje "listo" (caso Chrome: script MAIN
+        // inyectado tarde por scripting.executeScript del service worker).
+        inicializacion = null;
+        throw error;
+      });
     }
 
     await inicializacion;

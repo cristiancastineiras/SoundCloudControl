@@ -179,6 +179,15 @@ export function PantallaEqualizador(props: {
         </div>
       </section>
 
+      {estado.requiereInteraccion ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2.5 text-[0.76rem] text-amber-200/90">
+          <span aria-hidden="true" className="mt-px shrink-0 text-amber-400">⚡</span>
+          <span>{t.eqRequiereInteraccion}</span>
+        </div>
+      ) : null}
+
       {respuesta.estadoVista === 'sin-pestana' ? (
         <button
           type="button"
