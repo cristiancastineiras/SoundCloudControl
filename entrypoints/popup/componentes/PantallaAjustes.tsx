@@ -28,12 +28,14 @@ export function PantallaAjustes(props: {
   t: Textos;
   colorTema: string;
   mostrarDescargaMp3: boolean;
+  modoCompacto: boolean;
   intervalo: IntervaloActualizacion;
   backButtonRef?: Ref<HTMLButtonElement>;
   onVolver: () => void;
   onCambiarIdioma: (idioma: Idioma) => void;
   onCambiarColor: (color: string) => void;
   onCambiarMostrarDescargaMp3: (mostrar: boolean) => void;
+  onCambiarModoCompacto: (compacto: boolean) => void;
   onCambiarIntervalo: (intervalo: IntervaloActualizacion) => void;
 }) {
   const {
@@ -43,9 +45,11 @@ export function PantallaAjustes(props: {
     idioma,
     intervalo,
     mostrarDescargaMp3,
+    modoCompacto,
     onCambiarColor,
     onCambiarIdioma,
     onCambiarMostrarDescargaMp3,
+    onCambiarModoCompacto,
     onCambiarIntervalo,
     onVolver,
     panelId,
@@ -60,6 +64,8 @@ export function PantallaAjustes(props: {
   const temaId = useId();
   const descargaId = useId();
   const descargaDescId = useId();
+  const modoCompactoId = useId();
+  const modoCompactoDescId = useId();
   const atajosId = useId();
   const atajosDescId = useId();
   const creditosId = useId();
@@ -198,6 +204,41 @@ export function PantallaAjustes(props: {
                 mostrarGuardado();
               }}>
               {t.ocultar}
+            </button>
+          </div>
+        </Seccion>
+
+        <Seccion
+          titulo={t.modoCompacto}
+          tituloId={modoCompactoId}
+          desc={t.modoCompactoDesc}
+          descId={modoCompactoDescId}>
+          <div
+            className="flex gap-2"
+            role="group"
+            aria-labelledby={modoCompactoId}
+            aria-describedby={modoCompactoDescId}>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={modoCompacto ? 'true' : 'false'}
+              aria-pressed={modoCompacto}
+              onClick={() => {
+                onCambiarModoCompacto(true);
+                mostrarGuardado();
+              }}>
+              {t.activado}
+            </button>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={!modoCompacto ? 'true' : 'false'}
+              aria-pressed={!modoCompacto}
+              onClick={() => {
+                onCambiarModoCompacto(false);
+                mostrarGuardado();
+              }}>
+              {t.desactivado}
             </button>
           </div>
         </Seccion>

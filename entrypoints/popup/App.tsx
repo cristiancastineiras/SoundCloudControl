@@ -7,8 +7,12 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
+import { GearSix, SlidersHorizontal, X } from '@phosphor-icons/react';
 import {
+  ACCIONES_REPRODUCTOR,
+  MODOS_REPETICION,
   type AccionReproductor,
+  type EstadoCancion,
   type RespuestaDescarga,
   type RespuestaEqualizador,
   type RespuestaPopup,
@@ -28,6 +32,7 @@ import {
   TEXTOS,
   guardarIdioma,
   obtenerIdioma,
+  type Textos,
 } from './i18n';
 import {
   guardarColorTema,
@@ -38,9 +43,13 @@ import {
 } from './tema';
 import {
   guardarIntervalo,
+  guardarModoCompacto,
   guardarMostrarDescargaMp3,
+  guardarVersionNotifVista,
   leerIntervalo,
+  leerModoCompacto,
   leerMostrarDescargaMp3,
+  leerVersionNotifVista,
   type IntervaloActualizacion,
 } from './preferencias';
 import { AccionesEstado } from './componentes/AccionesEstado';
@@ -48,6 +57,7 @@ import { BloqueCancion } from './componentes/BloqueCancion';
 import { CabeceraPopup } from './componentes/CabeceraPopup';
 import { ControlesReproductor } from './componentes/ControlesReproductor';
 import { FondoPortada } from './componentes/FondoPortada';
+import { IconoControl } from './componentes/IconoControl';
 import { PantallaAjustes } from './componentes/PantallaAjustes';
 import { PantallaEqualizador } from './componentes/PantallaEqualizador';
 import { etiquetaEstado } from './utilidades';
@@ -75,6 +85,9 @@ function AplicacionPopup() {
   const [colorTema, setColorTema] = useState(leerColorTema);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(leerMostrarDescargaMp3);
   const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(leerIntervalo);
+  const [modoCompacto, setModoCompacto] = useState(leerModoCompacto);
+  const [versionLatest, setVersionLatest] = useState<string | null>(null);
+  const [notifActualizacionVisible, setNotifActualizacionVisible] = useState(false);
 
   // ---- Estado de datos -----------------------------------------------------
   const t = TEXTOS[idioma];
@@ -187,6 +200,36 @@ function AplicacionPopup() {
       window.clearTimeout(temporizadorEqualizadorRef.current);
     }
   }, []);
+
+  // ---- Comprobación de versión al montar ----------------------------------
+  useEffect(() => {
+    async function comprobarVersion() {
+      try {
+        const resp = await fetch(
+          'https://api.github.com/repos/cristiancastineiras/SoundCloudControl/releases/latest',
+          { headers: { Accept: 'application/vnd.github+json' } },
+        );
+        if (!resp.ok) return;
+        const datos = (await resp.json()) as { tag_name?: string };
+        const tagLatest = (datos.tag_name ?? '').replace(/^v/, '');
+        if (!tagLatest) return;
+        const versionActual = browser.runtime.getManifest().version;
+        const vistaDismissed = leerVersionNotifVista();
+        if (esVersionMayor(tagLatest, versionActual) && vistaDismissed !== tagLatest) {
+          setVersionLatest(tagLatest);
+          setNotifActualizacionVisible(true);
+        }
+      } catch {
+        // Error de red o API no disponible — silencioso
+      }
+    }
+    void comprobarVersion();
+  }, []);
+
+  // ---- Sync clase compact en body -----------------------------------------
+  useEffect(() => {
+    document.body.classList.toggle('sc-compact', modoCompacto);
+  }, [modoCompacto]);
 
   // ---- Sync de idioma + título de la pestaña ------------------------------
   useEffect(() => {
@@ -365,6 +408,16 @@ function AplicacionPopup() {
     setMostrarDescargaMp3(mostrar);
   }
 
+  function cambiarModoCompacto(compacto: boolean) {
+    guardarModoCompacto(compacto);
+    setModoCompacto(compacto);
+  }
+
+  function descartarNotifActualizacion() {
+    if (versionLatest) guardarVersionNotifVista(versionLatest);
+    setNotifActualizacionVisible(false);
+  }
+
   // ---- Equalizador (debounce de guardado) ---------------------------------
   const guardarEqualizador = useEffectEvent(
     async (ajustesSiguientes: AjustesEqualizador, revision: number) => {
@@ -513,12 +566,14 @@ function AplicacionPopup() {
             t={t}
             colorTema={colorTema}
             mostrarDescargaMp3={mostrarDescargaMp3}
+            modoCompacto={modoCompacto}
             intervalo={intervaloActualizacion}
             backButtonRef={botonVolverRef}
             onVolver={() => setVista('principal')}
             onCambiarIdioma={cambiarIdioma}
             onCambiarColor={cambiarColorTema}
             onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
+            onCambiarModoCompacto={cambiarModoCompacto}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
         ) : vista === 'equalizador' ? (
@@ -537,7 +592,119 @@ function AplicacionPopup() {
             onRestablecer={restablecerEqualizador}
             onAbrirSoundCloud={abrirSoundCloud}
           />
+        ) : modoCompacto ? (
+          // ── Compact strip ────────────────────────────────────────────────
+          <div className="relative z-10 flex flex-col">
+
+            <div className="flex items-stretch">
+              {/* Cover — mismo alto que el panel derecho */}
+              <div className="relative w-32 flex-none self-stretch overflow-hidden" aria-hidden="true">
+                {portada ? (
+                  <img src={portada} alt={cancion?.titulo ?? ''} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="sc-cover-fill h-full w-full" />
+                )}
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-r from-transparent to-black/60" />
+              </div>
+
+              {/* Right panel: title / artist / buttons all within cover height */}
+              <div className="flex min-w-0 flex-1 flex-col justify-between px-3 py-2.5">
+
+                {/* Title + settings icons */}
+                <div className="flex min-w-0 items-start gap-1">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate text-left text-[0.86rem] font-bold leading-tight text-marfil/95 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
+                    onClick={() => void abrirEnlace(cancion?.urlCancion ?? null)}
+                    disabled={!cancion?.urlCancion || accionEnCurso !== null}
+                    aria-label={cancion?.titulo ? t.abrirPaginaCancion(cancion.titulo) : respuesta.mensaje}
+                    title={cancion?.titulo ?? respuesta.mensaje}>
+                    {cancion?.titulo ?? respuesta.mensaje}
+                  </button>
+                  <div className="flex flex-none items-center">
+                    <button
+                      ref={botonEqualizadorRef}
+                      type="button"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-marfil/35 transition-colors hover:text-marfil/75"
+                      aria-label={t.abrirEqualizador}
+                      aria-expanded={false}
+                      aria-controls={ID_PANEL_EQUALIZADOR}
+                      onClick={() => setVista('equalizador')}>
+                      <SlidersHorizontal size={11} weight="bold" />
+                    </button>
+                    <button
+                      ref={botonAjustesRef}
+                      type="button"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-marfil/35 transition-colors hover:text-marfil/75"
+                      aria-label={t.abrirAjustes}
+                      aria-expanded={false}
+                      aria-controls={ID_PANEL_AJUSTES}
+                      onClick={() => setVista('ajustes')}>
+                      <GearSix size={11} weight="bold" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Artist */}
+                <button
+                  type="button"
+                  className="truncate text-left text-[0.7rem] leading-none text-marfil/45 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
+                  onClick={() => void abrirEnlace(cancion?.urlArtista ?? null)}
+                  disabled={!cancion?.urlArtista || accionEnCurso !== null}
+                  aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
+                  title={cancion?.artista ?? t.sinArtista}>
+                  {cancion?.artista ?? 'SoundCloud'}
+                </button>
+
+                {/* All controls in one line */}
+                {respuesta.estadoVista === 'disponible' && cancion ? (
+                  <ControlesCompactos
+                    cancion={cancion}
+                    bloqueado={controlesBloqueados}
+                    t={t}
+                    mostrarDescargaMp3={mostrarDescargaMp3}
+                    estadoDescarga={estadoDescarga}
+                    onEjecutarAccion={ejecutarAccion}
+                    onDescargar={descargarCancion}
+                  />
+                ) : (
+                  <AccionesEstado
+                    bloqueado={accionEnCurso !== null}
+                    t={t}
+                    onAbrirSoundCloud={abrirSoundCloud}
+                    onRecargar={async () => { await cargarEstado(); }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Update notification */}
+            {notifActualizacionVisible && versionLatest && (
+              <div className="flex items-center gap-2 border-t border-white/8 px-3.5 py-2">
+                <span className="flex-1 text-[0.7rem] font-medium leading-tight text-marfil/65">
+                  {t.nuevaVersionDisponible(versionLatest)}
+                </span>
+                <a
+                  href="https://github.com/cristiancastineiras/SoundCloudControl/releases/latest"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-none rounded-lg border border-white/12 bg-white/6 px-2.5 py-1 text-[0.68rem] font-semibold transition-colors hover:border-white/22 hover:bg-white/10"
+                  style={{ color: 'rgb(var(--sc-theme-rgb))' }}
+                  onClick={descartarNotifActualizacion}>
+                  {t.actualizar}
+                </a>
+                <button
+                  type="button"
+                  aria-label={t.cerrarNotificacion}
+                  className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-marfil/40 transition-colors hover:text-marfil/75"
+                  onClick={descartarNotifActualizacion}>
+                  <X size={10} weight="bold" />
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
+          // ── Normal layout ────────────────────────────────────────────────
           <div className="relative z-10 flex min-h-97.75 flex-col gap-4 px-4 pb-4 pt-4.5">
             <CabeceraPopup
               respuesta={respuesta}
@@ -580,6 +747,30 @@ function AplicacionPopup() {
                 }}
               />
             )}
+
+            {notifActualizacionVisible && versionLatest && (
+              <div className="mt-auto flex items-center gap-2 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5">
+                <span className="flex-1 text-[0.74rem] font-medium leading-tight text-marfil/80">
+                  {t.nuevaVersionDisponible(versionLatest)}
+                </span>
+                <a
+                  href="https://github.com/cristiancastineiras/SoundCloudControl/releases/latest"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="sc-chip px-2.5 py-1 text-[0.7rem]"
+                  style={{ color: 'rgb(var(--sc-theme-rgb))' }}
+                  onClick={descartarNotifActualizacion}>
+                  {t.actualizar}
+                </a>
+                <button
+                  type="button"
+                  aria-label={t.cerrarNotificacion}
+                  className="flex items-center justify-center rounded-lg p-1 text-marfil/50 transition-colors hover:text-marfil"
+                  onClick={descartarNotifActualizacion}>
+                  <X size={11} weight="bold" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -589,6 +780,99 @@ function AplicacionPopup() {
 
 async function enviarMensaje<TRespuesta>(mensaje: SolicitudPopup) {
   return (await browser.runtime.sendMessage(mensaje)) as TRespuesta;
+}
+
+function esVersionMayor(a: string, b: string): boolean {
+  const parsear = (v: string) => v.split('.').map((n) => Number(n) || 0);
+  const [aMa, aMi, aPa] = parsear(a);
+  const [bMa, bMi, bPa] = parsear(b);
+  if (aMa !== bMa) return aMa > bMa;
+  if (aMi !== bMi) return aMi > bMi;
+  return aPa > bPa;
+}
+
+function ControlesCompactos(props: {
+  cancion: EstadoCancion;
+  bloqueado: boolean;
+  t: Textos;
+  mostrarDescargaMp3: boolean;
+  estadoDescarga: EstadoDescarga;
+  onEjecutarAccion: (accion: AccionReproductor) => Promise<void> | void;
+  onDescargar: () => Promise<void> | void;
+}) {
+  const { bloqueado, cancion, estadoDescarga, mostrarDescargaMp3, onDescargar, onEjecutarAccion, t } = props;
+  const aleatorioActivo = cancion.aleatorioActivo;
+  const repeticionListaActiva = cancion.modoRepeticion === MODOS_REPETICION.lista;
+  const repeticionPistaActiva = cancion.modoRepeticion === MODOS_REPETICION.pista;
+  const accionRepeticionLista = repeticionListaActiva
+    ? ACCIONES_REPRODUCTOR.desactivarRepeticion
+    : ACCIONES_REPRODUCTOR.establecerRepeticionLista;
+  const accionRepeticionPista = repeticionPistaActiva
+    ? ACCIONES_REPRODUCTOR.desactivarRepeticion
+    : ACCIONES_REPRODUCTOR.establecerRepeticionPista;
+
+  return (
+    <div
+      className="flex items-center gap-1.5 mt-4"
+      role="group"
+      aria-label={t.controlesTransporte}>
+      {mostrarDescargaMp3 && estadoDescarga ? (
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {estadoDescarga === 'descargando' ? t.descargando
+            : estadoDescarga === 'ok' ? t.descargaOk
+            : t.descargaError}
+        </p>
+      ) : null}
+      <button type="button" className="sc-btn-xs" aria-label={t.pistaAnterior} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.cancionAnterior)}>
+        <IconoControl nombre="anterior" className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs sc-btn-xs-primary" aria-label={cancion.reproduciendo ? t.pausar : t.reproducir} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.alternarReproduccion)}>
+        <IconoControl nombre={cancion.reproduciendo ? 'pausa' : 'play'} className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" aria-label={t.siguientePista} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.siguienteCancion)}>
+        <IconoControl nombre="siguiente" className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" data-active={aleatorioActivo ? 'true' : 'false'} aria-pressed={aleatorioActivo}
+        aria-label={`${t.alternarAleatorio}. ${aleatorioActivo ? t.activado : t.desactivado}`} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.alternarAleatorio)}>
+        <IconoControl nombre="aleatorio" weight={aleatorioActivo ? 'fill' : 'regular'} className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" data-active={repeticionListaActiva ? 'true' : 'false'} aria-pressed={repeticionListaActiva}
+        aria-label={`${t.alternarRepeticionLista}. ${repeticionListaActiva ? t.activado : t.desactivado}`} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(accionRepeticionLista)}>
+        <IconoControl nombre="repetirLista" weight={repeticionListaActiva ? 'fill' : 'regular'} className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" data-active={repeticionPistaActiva ? 'true' : 'false'} aria-pressed={repeticionPistaActiva}
+        aria-label={`${t.alternarRepeticionPista}. ${repeticionPistaActiva ? t.activado : t.desactivado}`} disabled={bloqueado}
+        onClick={() => void onEjecutarAccion(accionRepeticionPista)}>
+        <IconoControl nombre="repetirPista" weight={repeticionPistaActiva ? 'fill' : 'regular'} className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" data-active={cancion.meGustaActivo ? 'true' : 'false'} data-variant="soft"
+        aria-pressed={cancion.meGustaActivo}
+        aria-label={`${cancion.meGustaActivo ? t.quitarMeGusta : t.marcarMeGusta}. ${cancion.meGustaActivo ? t.activado : t.desactivado}`}
+        disabled={bloqueado} onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.alternarMeGusta)}>
+        <IconoControl nombre="corazon" weight={cancion.meGustaActivo ? 'fill' : 'regular'} className="h-4 w-4" />
+      </button>
+      <button type="button" className="sc-btn-xs" data-active={cancion.silenciado ? 'true' : 'false'} data-variant="soft"
+        aria-pressed={cancion.silenciado}
+        aria-label={`${cancion.silenciado ? t.activarSonido : t.silenciarSonido}. ${cancion.silenciado ? t.activado : t.desactivado}`}
+        disabled={bloqueado} onClick={() => void onEjecutarAccion(ACCIONES_REPRODUCTOR.alternarSilencio)}>
+        <IconoControl nombre={cancion.silenciado ? 'volumenMute' : 'volumenAlto'} weight={cancion.silenciado ? 'fill' : 'regular'} className="h-4 w-4" />
+      </button>
+      {mostrarDescargaMp3 && (
+        <button type="button" className="sc-btn-xs" data-active={estadoDescarga === 'ok' ? 'true' : 'false'}
+          aria-label={estadoDescarga === 'descargando' ? t.descargando : estadoDescarga === 'ok' ? t.descargaOk : estadoDescarga === 'error' ? t.descargaError : t.descargarMp3}
+          disabled={bloqueado || estadoDescarga === 'descargando'} aria-busy={estadoDescarga === 'descargando'}
+          onClick={() => void onDescargar()}>
+          <IconoControl nombre={estadoDescarga === 'descargando' ? 'recargar' : 'descargar'} weight="regular"
+            className={estadoDescarga === 'descargando' ? 'animate-spin h-4 w-4' : 'h-4 w-4'} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default AplicacionPopup;
