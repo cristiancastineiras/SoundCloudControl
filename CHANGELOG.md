@@ -3,6 +3,11 @@
 Todos los cambios importantes del proyecto se documentan aquí.
 Plantilla: https://keepachangelog.com/en/1.0.0/
 
+## [1.4.1] - 2026-05-08
+
+### Fixed
+- Modo compacto: los botones "Abrir SoundCloud" y "Reintentar" ahora se adaptan correctamente al espacio reducido cuando SoundCloud no está abierto. Antes se mostraban con el tamaño del modo normal (3 rem de alto, texto 0.9 rem); ahora usan el estilo `sc-btn-soft` con iconos e texto más pequeños, alineados al resto de controles compactos.
+
 ## [1.4.0] - 2026-05-07
 
 ### Added

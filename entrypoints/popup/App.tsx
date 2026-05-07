@@ -666,6 +666,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                   />
                 ) : (
                   <AccionesEstado
+                    compacto
                     bloqueado={accionEnCurso !== null}
                     t={t}
                     onAbrirSoundCloud={abrirSoundCloud}
