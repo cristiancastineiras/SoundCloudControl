@@ -1,49 +1,77 @@
 # SoundCloud Control
-[![icono](./public/icon/128.png)](./public/icon/128.png)
 
+![SoundCloud Control icon](./public/icon/128.png)
 
-Extensión de navegador creada con WXT para controlar SoundCloud sin cambiar de pestaña.
+### Controla SoundCloud sin cambiar de pestaña
 
-<div align="center">
+![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=20&pause=1200&color=FF5500&center=true&vCenter=true&width=900&lines=Play%2C+pausa+y+skip+al+instante;Modo+compacto+para+no+comerte+media+pantalla;Equalizador%2C+descarga+MP3+y+atajos+de+teclado)
+
+![Release](https://img.shields.io/github/v/release/cristiancastineiras/SoundCloudControl?label=release&color=ff5500)
+![Release workflow](https://img.shields.io/github/actions/workflow/status/cristiancastineiras/SoundCloudControl/release.yml?label=release%20workflow)
+![Last commit](https://img.shields.io/github/last-commit/cristiancastineiras/SoundCloudControl)
+![GitHub stars](https://img.shields.io/github/stars/cristiancastineiras/SoundCloudControl?style=social)
+
+![WXT](https://img.shields.io/badge/WXT-0.20+-111111?logo=webcomponents.org&logoColor=white)
+![React](https://img.shields.io/badge/React-19-20232A?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
+
+## Qué es
+
+SoundCloud Control es una extensión para navegador que te deja manejar SoundCloud desde un popup rápido:
+
+- Controles principales: anterior, play/pause, siguiente.
+- Controles avanzados: shuffle, repetir lista, repetir pista, me gusta, mute.
+- Equalizador integrado.
+- Modo compacto para una UI más horizontal.
+- Botón de descarga MP3 configurable.
+- Aviso de actualización automática cuando hay nueva versión en GitHub Releases.
+
+Está pensada para ir rápido: abres el popup, tocas un botón y listo.
+
+## Capturas
 
 | Firefox | Chrome |
-|:-------:|:------:|
-| [![Firefox](./assets/firefox.png)](./assets/firefox.png) | [![Chrome](./assets/chrome.png)](./assets/chrome.png) |
+|:--:|:--:|
+| ![Popup en Firefox](./assets/firefox.png) | ![Popup en Chrome](./assets/chrome.png) |
 
-</div>
+| Compact mode | Tema personalizado + Equalizador |
+|:--:|:--:|
+| ![Modo compacto](./assets/firefox-compact-mode.png) | ![Colores personalizados](./assets/firefox-custom-colors.png) |
 
+| Equalizador |
+|:--:|
+| ![Equalizador](./assets/ecualizador.png) |
 
-## Resumen
+## Arquitectura
 
-SoundCloud Control detecta una pestaña activa de SoundCloud y muestra un popup con controles del reproductor.
+Diagrama generado desde GitDiagram:
 
-Incluye:
+- https://gitdiagram.com/cristiancastineiras/SoundCloudControl
 
-- Controles principales: anterior, reproducir/pausar, siguiente.
-- Controles avanzados: shuffle, repetición de lista, repetición de pista, me gusta y silencio.
-- Indicadores visuales de estado para saber qué modos están activos.
-- Acciones rápidas por teclado (comandos del navegador).
+![Diagrama de arquitectura](./assets/diagram.png)
 
-## Tecnologías
+## Stack
 
 - WXT
 - React + TypeScript
 - Tailwind CSS v4
-- Phosphor Icons (React)
+- Phosphor Icons
 
-## Estructura del proyecto
+## Estructura rápida
 
-- [entrypoints/background.ts](entrypoints/background.ts): coordinación de pestañas, comandos y mensajería.
-- [entrypoints/content.ts](entrypoints/content.ts): interacción real con el reproductor y el DOM de SoundCloud.
-- [entrypoints/popup/App.tsx](entrypoints/popup/App.tsx): orquestación del estado del popup.
-- [entrypoints/popup/componentes](entrypoints/popup/componentes): componentes de interfaz.
-- [lib/contratos.ts](lib/contratos.ts): tipos compartidos y contratos de mensajes.
-- [wxt.config.ts](wxt.config.ts): configuración de build/manifest para WXT.
+- entrypoints/background.ts: coordinación de pestañas, comandos y mensajería.
+- entrypoints/content.ts: control real del reproductor de SoundCloud en página.
+- entrypoints/popup/App.tsx: lógica principal del popup.
+- entrypoints/options/App.tsx: página de ajustes dedicada.
+- entrypoints/popup/componentes: UI reutilizable.
+- lib/contratos.ts: tipos y contratos compartidos.
+- wxt.config.ts: manifest, permisos y build.
 
 ## Requisitos
 
-- Node.js 20 o superior recomendado.
-- pnpm instalado globalmente.
+- Node.js 20+ (recomendado)
+- pnpm
 
 ## Instalación
 
@@ -51,61 +79,57 @@ Incluye:
 pnpm install
 ```
 
-## Scripts disponibles
+## Comandos útiles
 
 ```bash
-# Desarrollo (navegador por defecto)
+# Desarrollo
 pnpm dev
 
-# Desarrollo en Firefox
+# Desarrollo Firefox
 pnpm dev:firefox
 
-# Comprobar tipos
+# Type-check
 pnpm compile
 
-# Build producción (navegador por defecto)
+# Build
 pnpm build
-
-# Build producción para Firefox
 pnpm build:firefox
 
-# Generar zip (navegador por defecto)
+# Zips para releases
 pnpm zip
-
-# Generar zip para Firefox
 pnpm zip:firefox
+pnpm zip:all
 ```
 
-## Uso
+## Uso en 20 segundos
 
 1. Abre SoundCloud en al menos una pestaña.
 2. Pulsa el icono de la extensión.
-3. Controla la reproducción desde el popup.
+3. Controla música sin cambiar de pestaña.
 
-Si no hay pestaña compatible, el popup mostrará el estado correspondiente y la opción de abrir SoundCloud.
+Si no hay pestaña compatible, el popup te muestra el estado y la opción de abrir SoundCloud.
 
-## Atajos de teclado (comandos)
+## Atajos de teclado
 
-Definidos en [wxt.config.ts](wxt.config.ts):
+Definidos en wxt.config.ts:
 
-- `Ctrl+Shift+5`: pista anterior
-- `Ctrl+Shift+6`: reproducir/pausar
-- `Ctrl+Shift+7`: pista siguiente
+- Ctrl+Shift+5: pista anterior
+- Ctrl+Shift+6: play/pause
+- Ctrl+Shift+7: pista siguiente
 
 Puedes cambiarlos desde la gestión de atajos del navegador.
 
 ## Permisos
 
-La extensión usa:
+- tabs: localizar y activar pestañas de SoundCloud.
+- host_permissions en soundcloud.com y subdominios.
+- host_permissions en api.github.com para comprobar nuevas releases.
 
-- `tabs`: localizar y activar pestañas de SoundCloud.
-- `host_permissions` para `soundcloud.com` y subdominios: leer/controlar el reproductor en esas páginas.
+## Release flow
 
-## Solución de problemas
+- El workflow de release se dispara al hacer push de un tag tipo vX.Y.Z.
+- Se ejecuta type-check, se generan zips para Chrome/Firefox y se publica release automática.
 
-- Si falla el popup o no encuentra módulos en build, ejecuta primero `pnpm compile` para detectar inconsistencias de tipos/imports.
-- Si WXT no resuelve un archivo, verifica que exista físicamente en disco (no solo abierto en el editor).
+## Estado
 
-## Estado actual
-
-Proyecto funcional y empaquetable con `pnpm zip:firefox`, orientado a control rápido del reproductor con una UI compacta y mantenible.
+Proyecto activo y orientado a velocidad de uso, con una UI compacta y configurable para el día a día.
