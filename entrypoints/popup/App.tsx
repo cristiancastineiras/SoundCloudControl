@@ -611,7 +611,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                 <div className="flex min-w-0 items-start gap-1">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 truncate text-left text-[0.86rem] font-bold leading-tight text-marfil/95 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
+                    className="geist min-w-0 flex-1 truncate text-left text-[1rem] font-bold leading-tight text-marfil/95 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
                     onClick={() => void abrirEnlace(cancion?.urlCancion ?? null)}
                     disabled={!cancion?.urlCancion || accionEnCurso !== null}
                     aria-label={cancion?.titulo ? t.abrirPaginaCancion(cancion.titulo) : respuesta.mensaje}

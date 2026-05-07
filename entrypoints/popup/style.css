@@ -15,8 +15,17 @@
  * ============================================================================
  */
 
-@import '@fontsource/inter/latin.css';
-@import '@fontsource/geist/latin.css';
+/* Tipografías — solo woff2 (Chrome 111+, Firefox 114+ lo soportan universal) */
+@font-face { font-family: 'Inter'; font-style: normal; font-display: swap; font-weight: 400; src: url('@fontsource/inter/files/inter-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-display: swap; font-weight: 500; src: url('@fontsource/inter/files/inter-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-display: swap; font-weight: 600; src: url('@fontsource/inter/files/inter-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-display: swap; font-weight: 700; src: url('@fontsource/inter/files/inter-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-display: swap; font-weight: 800; src: url('@fontsource/inter/files/inter-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-style: normal; font-display: swap; font-weight: 400; src: url('@fontsource/geist/files/geist-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-style: normal; font-display: swap; font-weight: 500; src: url('@fontsource/geist/files/geist-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-style: normal; font-display: swap; font-weight: 600; src: url('@fontsource/geist/files/geist-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-style: normal; font-display: swap; font-weight: 700; src: url('@fontsource/geist/files/geist-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-style: normal; font-display: swap; font-weight: 800; src: url('@fontsource/geist/files/geist-latin-800-normal.woff2') format('woff2'); }
 @import 'tailwindcss';
 
 @theme {
@@ -111,6 +120,11 @@
 
   button { cursor: pointer !important; }
 
+  h1, h2, h3, h4, h5, h6 { 
+    font-family: var(--font-geist);
+    margin: 0;
+  }
+
   .sr-only {
     border: 0;
     clip: rect(0 0 0 0);
@@ -133,6 +147,9 @@
  *    sintaxis `rgb(var(--sc-theme-rgb) / <alpha>)`.
  * ============================================================================= */
 @layer components {
+
+  .geist { font-family: var(--font-geist); }
+
 
   /* --- Tarjeta principal y fondos del popup ----------------------------- */
   .sc-card {
