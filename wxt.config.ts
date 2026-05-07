@@ -3,9 +3,43 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
-  vite: () => ({
-    plugins: [preact(), tailwindcss()],
+  vite: (env) => ({
+    plugins: [
+      preact({
+        prefreshEnabled: env.mode === 'development',
+      }),
+      tailwindcss(),
+    ],
+    build: {
+      target: 'esnext',
+      modulePreload: { polyfill: false },
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          passes: 3,
+          drop_console: true,
+          drop_debugger: true,
+          pure_getters: true,
+          unsafe_arrows: true,
+        },
+        mangle: true,
+        format: {
+          comments: false,
+        },
+      },
+      rolldownOptions: {
+        treeshake: {
+          annotations: true,
+        },
+      },
+    },
   }),
+  zip: {
+    exclude: [
+      '**/*.ico',   // no referenciados en manifest, solo para web favicon
+      '**/*.woff',  // navegadores objetivo usan woff2; woff nunca se carga
+    ],
+  },
   manifest: {
     name: 'SoundCloud Control',
     description: 'Controla la reproducción de SoundCloud sin cambiar de pestaña.',
