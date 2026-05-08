@@ -2,7 +2,7 @@
 
 <p align="start">
   <a 
-  href=""
+  href="https://chromewebstore.google.com/detail/soundcloud-control/nhohbfpenjlnkoifkjgmiiofippalpae"
   target="_blank"
   >
     <img src="./assets/get-extension/get-in-chrome.svg" height="80">
