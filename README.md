@@ -146,3 +146,11 @@ Puedes cambiarlos desde la gestión de atajos del navegador.
 ## Estado
 
 Proyecto activo y orientado a velocidad de uso, con una UI compacta y configurable para el día a día.
+
+## Disclaimer
+
+SoundCloud Control is an independent, open-source browser extension developed by a third party. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with SoundCloud Ltd. or any of its subsidiaries or affiliates.
+
+The name "SoundCloud" and its logo are registered trademarks of SoundCloud Ltd. Their use here is solely for the purpose of identifying the service this extension interacts with, and does not imply any association or endorsement.
+
+This extension operates entirely within the user's browser by interacting with the publicly visible DOM of the SoundCloud web player. It does not scrape, store, redistribute, or monetize any SoundCloud content.
