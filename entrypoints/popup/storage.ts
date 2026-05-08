@@ -1,23 +1,33 @@
 import { storage } from '#imports';
-import { type Idioma, obtenerIdiomaNavegador } from './i18n';
+import {
+  type Idioma,
+  normalizarIdioma,
+  obtenerIdiomaNavegador,
+} from './i18n';
 import {
   COLOR_TEMA_POR_DEFECTO,
   normalizarColorTema,
 } from './tema';
 import {
   INTERVALO_POR_DEFECTO,
+  MODO_APARIENCIA_POR_DEFECTO,
   MODO_COMPACTO_POR_DEFECTO,
+  esModoAparienciaValido,
   MOSTRAR_DESCARGA_MP3_POR_DEFECTO,
+  MOSTRAR_SLIDER_VOLUMEN_POR_DEFECTO,
   VERSION_NOTIF_VISTA_POR_DEFECTO,
   esIntervaloValido,
   type IntervaloActualizacion,
+  type ModoApariencia,
 } from './preferencias';
 
 const CLAVE_LEGACY_MIGRADA = 'local:legacy-settings-migrated';
 const CLAVE_IDIOMA = 'local:idioma';
 const CLAVE_TEMA = 'local:tema';
 const CLAVE_INTERVALO = 'local:intervalo';
+const CLAVE_MODO_APARIENCIA = 'local:modo-apariencia';
 const CLAVE_MOSTRAR_DESCARGA_MP3 = 'local:mostrar-descarga-mp3';
+const CLAVE_MOSTRAR_SLIDER_VOLUMEN = 'local:mostrar-slider-volumen';
 const CLAVE_MODO_COMPACTO = 'local:modo-compacto';
 const CLAVE_VERSION_NOTIF_VISTA = 'local:version-notif-vista';
 
@@ -40,12 +50,20 @@ const colorTemaItem = storage.defineItem<string>(CLAVE_TEMA, {
   fallback: COLOR_TEMA_POR_DEFECTO,
 });
 
+const modoAparienciaItem = storage.defineItem<ModoApariencia>(CLAVE_MODO_APARIENCIA, {
+  fallback: MODO_APARIENCIA_POR_DEFECTO,
+});
+
 const intervaloItem = storage.defineItem<IntervaloActualizacion>(CLAVE_INTERVALO, {
   fallback: INTERVALO_POR_DEFECTO,
 });
 
 const mostrarDescargaMp3Item = storage.defineItem<boolean>(CLAVE_MOSTRAR_DESCARGA_MP3, {
   fallback: MOSTRAR_DESCARGA_MP3_POR_DEFECTO,
+});
+
+const mostrarSliderVolumenItem = storage.defineItem<boolean>(CLAVE_MOSTRAR_SLIDER_VOLUMEN, {
+  fallback: MOSTRAR_SLIDER_VOLUMEN_POR_DEFECTO,
 });
 
 const modoCompactoItem = storage.defineItem<boolean>(CLAVE_MODO_COMPACTO, {
@@ -59,8 +77,10 @@ const versionNotifVistaItem = storage.defineItem<string>(CLAVE_VERSION_NOTIF_VIS
 export type PreferenciasPersistidas = {
   idioma: Idioma;
   colorTema: string;
+  modoApariencia: ModoApariencia;
   intervaloActualizacion: IntervaloActualizacion;
   mostrarDescargaMp3: boolean;
+  mostrarSliderVolumen: boolean;
   modoCompacto: boolean;
 };
 
@@ -71,8 +91,9 @@ export async function migrarPreferenciasLegacy(): Promise<void> {
 
   try {
     const idiomaLegacy = localStorage.getItem(LEGACY_CLAVE_IDIOMA);
-    if (idiomaLegacy === 'es' || idiomaLegacy === 'en') {
-      tareas.push(idiomaItem.setValue(idiomaLegacy));
+    const idiomaMigrado = normalizarIdioma(idiomaLegacy);
+    if (idiomaMigrado) {
+      tareas.push(idiomaItem.setValue(idiomaMigrado));
     }
 
     const colorLegacy = localStorage.getItem(LEGACY_CLAVE_TEMA);
@@ -110,28 +131,34 @@ export async function migrarPreferenciasLegacy(): Promise<void> {
 export async function cargarPreferenciasPersistidas(): Promise<PreferenciasPersistidas> {
   await migrarPreferenciasLegacy();
 
-  const [idioma, colorTema, intervaloActualizacion, mostrarDescargaMp3, modoCompacto] = await Promise.all([
+  const [idioma, colorTema, modoApariencia, intervaloActualizacion, mostrarDescargaMp3, mostrarSliderVolumen, modoCompacto] = await Promise.all([
     idiomaItem.getValue(),
     colorTemaItem.getValue(),
+    modoAparienciaItem.getValue(),
     intervaloItem.getValue(),
     mostrarDescargaMp3Item.getValue(),
+    mostrarSliderVolumenItem.getValue(),
     modoCompactoItem.getValue(),
   ]);
 
   return {
-    idioma,
+    idioma: normalizarIdioma(idioma) ?? obtenerIdiomaNavegador(),
     colorTema: normalizarColorTema(colorTema),
+    modoApariencia: esModoAparienciaValido(modoApariencia)
+      ? modoApariencia
+      : MODO_APARIENCIA_POR_DEFECTO,
     intervaloActualizacion: esIntervaloValido(intervaloActualizacion)
       ? intervaloActualizacion
       : INTERVALO_POR_DEFECTO,
     mostrarDescargaMp3,
+    mostrarSliderVolumen,
     modoCompacto,
   };
 }
 
 export async function leerIdioma(): Promise<Idioma> {
   await migrarPreferenciasLegacy();
-  return idiomaItem.getValue();
+  return normalizarIdioma(await idiomaItem.getValue()) ?? obtenerIdiomaNavegador();
 }
 
 export async function guardarIdioma(idioma: Idioma): Promise<void> {
@@ -145,6 +172,16 @@ export async function leerColorTema(): Promise<string> {
 
 export async function guardarColorTema(color: string): Promise<void> {
   await colorTemaItem.setValue(normalizarColorTema(color));
+}
+
+export async function leerModoApariencia(): Promise<ModoApariencia> {
+  await migrarPreferenciasLegacy();
+  const valor = await modoAparienciaItem.getValue();
+  return esModoAparienciaValido(valor) ? valor : MODO_APARIENCIA_POR_DEFECTO;
+}
+
+export async function guardarModoApariencia(modoApariencia: ModoApariencia): Promise<void> {
+  await modoAparienciaItem.setValue(modoApariencia);
 }
 
 export async function leerIntervalo(): Promise<IntervaloActualizacion> {
@@ -164,6 +201,15 @@ export async function leerMostrarDescargaMp3(): Promise<boolean> {
 
 export async function guardarMostrarDescargaMp3(mostrar: boolean): Promise<void> {
   await mostrarDescargaMp3Item.setValue(mostrar);
+}
+
+export async function leerMostrarSliderVolumen(): Promise<boolean> {
+  await migrarPreferenciasLegacy();
+  return mostrarSliderVolumenItem.getValue();
+}
+
+export async function guardarMostrarSliderVolumen(mostrar: boolean): Promise<void> {
+  await mostrarSliderVolumenItem.setValue(mostrar);
 }
 
 export async function leerModoCompacto(): Promise<boolean> {

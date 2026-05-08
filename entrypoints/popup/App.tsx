@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -38,20 +39,31 @@ import {
 } from './tema';
 import {
   type IntervaloActualizacion,
+  type ModoApariencia,
 } from './preferencias';
 import {
   guardarColorTema,
   guardarIdioma,
   guardarIntervalo,
+  guardarModoApariencia,
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
+  guardarMostrarSliderVolumen,
   guardarVersionNotifVista,
   leerVersionNotifVista,
   type PreferenciasPersistidas,
 } from './storage';
+import {
+  aplicarLayoutCompactoPopup,
+  aplicarModoAparienciaDocumento,
+  obtenerAnchoPopup,
+  programarSincronizacionTamanoPopup,
+} from './documento';
 import { AccionesEstado } from './componentes/AccionesEstado';
 import { BloqueCancion } from './componentes/BloqueCancion';
+import { BotonSeguirArtista } from './componentes/BotonSeguirArtista';
 import { CabeceraPopup } from './componentes/CabeceraPopup';
+import { ControlVolumen } from './componentes/ControlVolumen';
 import { ControlesReproductor } from './componentes/ControlesReproductor';
 import { FondoPortada } from './componentes/FondoPortada';
 import { IconoControl } from './componentes/IconoControl';
@@ -82,7 +94,9 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const [idioma, setIdioma] = useState<Idioma>(preferenciasIniciales.idioma);
   const [vista, setVista] = useState<Vista>('principal');
   const [colorTema, setColorTema] = useState(preferenciasIniciales.colorTema);
+  const [modoApariencia, setModoApariencia] = useState<ModoApariencia>(preferenciasIniciales.modoApariencia);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
+  const [mostrarSliderVolumen, setMostrarSliderVolumen] = useState(preferenciasIniciales.mostrarSliderVolumen);
   const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
   const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
   const [versionLatest, setVersionLatest] = useState<string | null>(null);
@@ -104,13 +118,16 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const [accionEnCurso, setAccionEnCurso] = useState<AccionInterfaz | null>(null);
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
   const [guardandoEqualizador, setGuardandoEqualizador] = useState(false);
+  const [volumenTemporal, setVolumenTemporal] = useState<number | null>(null);
 
   // ---- Refs ----------------------------------------------------------------
   const botonAjustesRef = useRef<HTMLButtonElement | null>(null);
   const botonEqualizadorRef = useRef<HTMLButtonElement | null>(null);
   const botonVolverRef = useRef<HTMLButtonElement | null>(null);
   const botonVolverEqualizadorRef = useRef<HTMLButtonElement | null>(null);
+  const popupRootRef = useRef<HTMLElement | null>(null);
   const vistaAnteriorRef = useRef<Vista>('principal');
+  const revisionVolumenRef = useRef(0);
   const revisionEqualizadorRef = useRef(0);
   const temporizadorEqualizadorRef = useRef<number | null>(null);
   const ajustesEqualizadorPendientesRef = useRef<AjustesEqualizador | null>(null);
@@ -225,11 +242,6 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
     void comprobarVersion();
   }, []);
 
-  // ---- Sync clase compact en body -----------------------------------------
-  useEffect(() => {
-    document.body.classList.toggle('sc-compact', modoCompacto);
-  }, [modoCompacto]);
-
   // ---- Sync de idioma + título de la pestaña ------------------------------
   useEffect(() => {
     document.documentElement.lang = idioma;
@@ -269,8 +281,144 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const cancion = respuesta.cancion;
   const equalizador = respuestaEqualizador.equalizador;
   const portada = obtenerImagenGrande(cancion?.urlImagen ?? null);
+  const popupCompactoActivo = vista === 'principal' && modoCompacto;
+  const anchoPopup = obtenerAnchoPopup(popupCompactoActivo);
   const controlesBloqueados =
     accionEnCurso !== null || respuesta.estadoVista !== 'disponible';
+  const volumenVisible = cancion
+    ? volumenTemporal ?? cancion.volumen
+    : 0;
+  const silenciadoVisible = cancion
+    ? volumenTemporal !== null
+      ? volumenTemporal === 0
+      : cancion.silenciado
+    : false;
+
+  useEffect(() => {
+    aplicarModoAparienciaDocumento(modoApariencia);
+  }, [modoApariencia]);
+
+  // ---- Sync tamaño real del popup en Chrome -------------------------------
+  useLayoutEffect(() => {
+    aplicarLayoutCompactoPopup(popupCompactoActivo);
+    programarSincronizacionTamanoPopup(popupRootRef.current, anchoPopup);
+  }, [anchoPopup, popupCompactoActivo]);
+
+  useLayoutEffect(() => {
+    const popupRoot = popupRootRef.current;
+
+    if (!popupRoot || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    const observador = new ResizeObserver(() => {
+      programarSincronizacionTamanoPopup(popupRoot, anchoPopup);
+    });
+
+    observador.observe(popupRoot);
+    return () => {
+      observador.disconnect();
+    };
+  }, [anchoPopup]);
+
+  useLayoutEffect(() => {
+    programarSincronizacionTamanoPopup(popupRootRef.current, anchoPopup);
+  }, [
+    accionEnCurso,
+    anchoPopup,
+    cancion?.artista,
+    cancion?.titulo,
+    estadoDescarga,
+    guardandoEqualizador,
+    idioma,
+    modoApariencia,
+    mostrarSliderVolumen,
+    notifActualizacionVisible,
+    respuesta.estadoVista,
+    respuestaEqualizador.estadoVista,
+    versionLatest,
+    vista,
+  ]);
+
+  // ---- Atajos locales del popup ------------------------------------------
+  useEffect(() => {
+    if (vista !== 'principal' || respuesta.estadoVista !== 'disponible' || !cancion) {
+      return undefined;
+    }
+
+    const alPulsarAtajoLocal = (evento: KeyboardEvent) => {
+      if (
+        evento.defaultPrevented ||
+        evento.altKey ||
+        evento.ctrlKey ||
+        evento.metaKey ||
+        accionEnCurso !== null ||
+        esElementoEditable(document.activeElement)
+      ) {
+        return;
+      }
+
+      const tecla = evento.key.length === 1 ? evento.key.toLowerCase() : evento.key;
+
+      if (tecla === ' ' || tecla === 'k') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.alternarReproduccion);
+        return;
+      }
+
+      if (tecla === 'ArrowLeft' || tecla === 'j') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.cancionAnterior);
+        return;
+      }
+
+      if (tecla === 'ArrowRight' || tecla === 'l') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.siguienteCancion);
+        return;
+      }
+
+      if (tecla === 'f') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.alternarMeGusta);
+        return;
+      }
+
+      if (tecla === 's') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.alternarAleatorio);
+        return;
+      }
+
+      if (tecla === 'm') {
+        evento.preventDefault();
+        void ejecutarAccion(ACCIONES_REPRODUCTOR.alternarSilencio);
+        return;
+      }
+
+      if (tecla === 'r') {
+        evento.preventDefault();
+        void ejecutarAccion(obtenerAccionRepeticionSiguiente(cancion.modoRepeticion));
+        return;
+      }
+
+      if (tecla === 'ArrowUp' || tecla === '+' || tecla === '=') {
+        evento.preventDefault();
+        void ajustarVolumen(volumenVisible + 10);
+        return;
+      }
+
+      if (tecla === 'ArrowDown' || tecla === '-') {
+        evento.preventDefault();
+        void ajustarVolumen(volumenVisible - 10);
+      }
+    };
+
+    window.addEventListener('keydown', alPulsarAtajoLocal);
+    return () => {
+      window.removeEventListener('keydown', alPulsarAtajoLocal);
+    };
+  }, [accionEnCurso, cancion, respuesta.estadoVista, vista, volumenVisible]);
 
   // El gradiente de la tarjeta lo aporta `.sc-card`; aquí solo inyectamos el
   // RGB del tema activo en una variable CSS para que toda la cascada reaccione.
@@ -386,6 +534,33 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
     }
   }
 
+  async function ajustarVolumen(volumen: number) {
+    const volumenNormalizado = normalizarVolumenUi(volumen);
+    const revision = revisionVolumenRef.current + 1;
+
+    revisionVolumenRef.current = revision;
+    setVolumenTemporal(volumenNormalizado);
+
+    try {
+      const siguienteEstado = await enviarMensaje<RespuestaPopup>({
+        canal: 'soundcloud-control',
+        destino: 'background',
+        tipo: 'ajustar-volumen',
+        volumen: volumenNormalizado,
+      });
+
+      if (revision !== revisionVolumenRef.current) return;
+      setRespuesta(siguienteEstado);
+    } catch {
+      if (revision !== revisionVolumenRef.current) return;
+      void cargarEstado(true);
+    } finally {
+      if (revision === revisionVolumenRef.current) {
+        setVolumenTemporal(null);
+      }
+    }
+  }
+
   function cambiarIdioma(nuevoIdioma: Idioma) {
     void guardarIdioma(nuevoIdioma);
     setIdioma(nuevoIdioma);
@@ -397,6 +572,11 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
     setColorTema(colorNormalizado);
   }
 
+  function cambiarModoApariencia(nuevoModo: ModoApariencia) {
+    void guardarModoApariencia(nuevoModo);
+    setModoApariencia(nuevoModo);
+  }
+
   function cambiarIntervaloActualizacion(nuevo: IntervaloActualizacion) {
     void guardarIntervalo(nuevo);
     setIntervaloActualizacion(nuevo);
@@ -405,6 +585,11 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   function cambiarMostrarDescargaMp3(mostrar: boolean) {
     void guardarMostrarDescargaMp3(mostrar);
     setMostrarDescargaMp3(mostrar);
+  }
+
+  function cambiarMostrarSliderVolumen(mostrar: boolean) {
+    void guardarMostrarSliderVolumen(mostrar);
+    setMostrarSliderVolumen(mostrar);
   }
 
   function cambiarModoCompacto(compacto: boolean) {
@@ -538,7 +723,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
 
   // ---- Render --------------------------------------------------------------
   return (
-    <main className="relative w-full" aria-labelledby={ID_TITULO_POPUP}>
+    <main ref={popupRootRef} className="relative w-full" aria-labelledby={ID_TITULO_POPUP}>
       <h1 id={ID_TITULO_POPUP} className="sr-only">{t.appNombre}</h1>
       <p
         id={ID_ESTADO_VIVO}
@@ -562,14 +747,18 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
             idioma={idioma}
             t={t}
             colorTema={colorTema}
+            modoApariencia={modoApariencia}
             mostrarDescargaMp3={mostrarDescargaMp3}
+            mostrarSliderVolumen={mostrarSliderVolumen}
             modoCompacto={modoCompacto}
             intervalo={intervaloActualizacion}
             backButtonRef={botonVolverRef}
             onVolver={() => setVista('principal')}
             onCambiarIdioma={cambiarIdioma}
             onCambiarColor={cambiarColorTema}
+            onCambiarModoApariencia={cambiarModoApariencia}
             onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
+            onCambiarMostrarSliderVolumen={cambiarMostrarSliderVolumen}
             onCambiarModoCompacto={cambiarModoCompacto}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
@@ -642,16 +831,31 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                   </div>
                 </div>
 
-                {/* Artist */}
-                <button
-                  type="button"
-                  className="truncate text-left text-[0.7rem] leading-none text-marfil/45 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
-                  onClick={() => void abrirEnlace(cancion?.urlArtista ?? null)}
-                  disabled={!cancion?.urlArtista || accionEnCurso !== null}
-                  aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
-                  title={cancion?.artista ?? t.sinArtista}>
-                  {cancion?.artista ?? 'SoundCloud'}
-                </button>
+                {/* Artist + follow */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate text-left text-[0.7rem] leading-none text-marfil/45 transition-opacity hover:opacity-70 disabled:hover:opacity-100"
+                    onClick={() => void abrirEnlace(cancion?.urlArtista ?? null)}
+                    disabled={!cancion?.urlArtista || accionEnCurso !== null}
+                    aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
+                    title={cancion?.artista ?? t.sinArtista}>
+                    {cancion?.artista ?? 'SoundCloud'}
+                  </button>
+
+                  {cancion?.puedeSeguirArtista ? (
+                    <BotonSeguirArtista
+                      compacto
+                      artista={cancion.artista || t.sinArtista}
+                      siguiendo={cancion.siguiendoArtista}
+                      bloqueado={accionEnCurso !== null}
+                      t={t}
+                      onClick={() => {
+                        void ejecutarAccion(ACCIONES_REPRODUCTOR.alternarSeguirArtista);
+                      }}
+                    />
+                  ) : null}
+                </div>
 
                 {/* All controls in one line */}
                 {respuesta.estadoVista === 'disponible' && cancion ? (
@@ -675,6 +879,19 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                 )}
               </div>
             </div>
+
+            {respuesta.estadoVista === 'disponible' && cancion && mostrarSliderVolumen ? (
+              <div className="border-t border-white/8 px-3.5 py-2.5">
+                <ControlVolumen
+                  compacto
+                  volumen={volumenVisible}
+                  silenciado={silenciadoVisible}
+                  bloqueado={respuesta.estadoVista !== 'disponible'}
+                  t={t}
+                  onCambiarVolumen={ajustarVolumen}
+                />
+              </div>
+            ) : null}
 
             {/* Update notification */}
             {notifActualizacionVisible && versionLatest && (
@@ -723,18 +940,31 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
               bloqueado={accionEnCurso !== null}
               t={t}
               onAbrirEnlace={abrirEnlace}
+              onAlternarSeguimientoArtista={() => ejecutarAccion(ACCIONES_REPRODUCTOR.alternarSeguirArtista)}
             />
 
             {respuesta.estadoVista === 'disponible' && cancion ? (
-              <ControlesReproductor
-                cancion={cancion}
-                bloqueado={controlesBloqueados}
-                t={t}
-                estadoDescarga={estadoDescarga}
-                mostrarBotonDescarga={mostrarDescargaMp3}
-                onEjecutarAccion={ejecutarAccion}
-                onDescargar={descargarCancion}
-              />
+              <>
+                <ControlesReproductor
+                  cancion={cancion}
+                  bloqueado={controlesBloqueados}
+                  t={t}
+                  estadoDescarga={estadoDescarga}
+                  mostrarBotonDescarga={mostrarDescargaMp3}
+                  onEjecutarAccion={ejecutarAccion}
+                  onDescargar={descargarCancion}
+                />
+
+                {mostrarSliderVolumen ? (
+                  <ControlVolumen
+                    volumen={volumenVisible}
+                    silenciado={silenciadoVisible}
+                    bloqueado={respuesta.estadoVista !== 'disponible'}
+                    t={t}
+                    onCambiarVolumen={ajustarVolumen}
+                  />
+                ) : null}
+              </>
             ) : (
               <AccionesEstado
                 bloqueado={accionEnCurso !== null}
@@ -794,6 +1024,31 @@ function useEventCallback<T extends (...args: never[]) => unknown>(callback: T):
   callbackRef.current = callback;
 
   return useCallback(((...args: Parameters<T>) => callbackRef.current(...args)) as T, []);
+}
+
+function normalizarVolumenUi(valor: number) {
+  if (!Number.isFinite(valor)) return 0;
+  return Math.max(0, Math.min(100, Math.round(valor)));
+}
+
+function obtenerAccionRepeticionSiguiente(modoActual: EstadoCancion['modoRepeticion']) {
+  switch (modoActual) {
+    case MODOS_REPETICION.apagado:
+      return ACCIONES_REPRODUCTOR.establecerRepeticionLista;
+    case MODOS_REPETICION.lista:
+      return ACCIONES_REPRODUCTOR.establecerRepeticionPista;
+    case MODOS_REPETICION.pista:
+    default:
+      return ACCIONES_REPRODUCTOR.desactivarRepeticion;
+  }
+}
+
+function esElementoEditable(elemento: Element | null) {
+  if (!(elemento instanceof HTMLElement)) return false;
+  if (elemento.isContentEditable) return true;
+
+  const etiqueta = elemento.tagName;
+  return etiqueta === 'INPUT' || etiqueta === 'TEXTAREA' || etiqueta === 'SELECT';
 }
 
 function ControlesCompactos(props: {
