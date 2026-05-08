@@ -1,6 +1,7 @@
 import type { EstadoCancion, RespuestaPopup } from '../../../lib/contratos';
 import type { Textos } from '../i18n';
 import { mensajeSecundario, unirClases } from '../utilidades';
+import { BotonSeguirArtista } from './BotonSeguirArtista';
 
 export function BloqueCancion(props: {
   cancion: EstadoCancion | null;
@@ -8,8 +9,16 @@ export function BloqueCancion(props: {
   bloqueado: boolean;
   t: Textos;
   onAbrirEnlace: (url: string | null) => Promise<void> | void;
+  onAlternarSeguimientoArtista: () => Promise<void> | void;
 }) {
-  const { bloqueado, cancion, onAbrirEnlace, respuesta, t } = props;
+  const {
+    bloqueado,
+    cancion,
+    onAbrirEnlace,
+    onAlternarSeguimientoArtista,
+    respuesta,
+    t,
+  } = props;
   const detalleEstado = mensajeSecundario(respuesta);
 
   return (
@@ -18,19 +27,33 @@ export function BloqueCancion(props: {
       aria-labelledby="sc-current-track-heading">
       <h2 id="sc-current-track-heading" className="sr-only">{t.reproductorActual}</h2>
 
-      <button
-        type="button"
-        className={unirClases(
-          'sc-meta-pill self-start px-2 py-1.25 text-[0.76rem] font-bold tracking-[0.08em] uppercase',
-        )}
-        onClick={() => {
-          void onAbrirEnlace(cancion?.urlArtista ?? null);
-        }}
-        disabled={!cancion?.urlArtista || bloqueado}
-        aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
-        title={cancion?.artista ?? t.sinArtista}>
-        {cancion?.artista ?? 'SoundCloud'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className={unirClases(
+            'sc-meta-pill self-start px-2 py-1.25 text-[0.76rem] font-bold tracking-[0.08em] uppercase',
+          )}
+          onClick={() => {
+            void onAbrirEnlace(cancion?.urlArtista ?? null);
+          }}
+          disabled={!cancion?.urlArtista || bloqueado}
+          aria-label={cancion?.artista ? t.abrirPaginaArtista(cancion.artista) : t.sinArtista}
+          title={cancion?.artista ?? t.sinArtista}>
+          {cancion?.artista ?? 'SoundCloud'}
+        </button>
+
+        {cancion?.puedeSeguirArtista ? (
+          <BotonSeguirArtista
+            artista={cancion.artista || t.sinArtista}
+            siguiendo={cancion.siguiendoArtista}
+            bloqueado={bloqueado}
+            t={t}
+            onClick={() => {
+              void onAlternarSeguimientoArtista();
+            }}
+          />
+        ) : null}
+      </div>
 
       <button
         type="button"
