@@ -11,7 +11,11 @@ import {
   type Ref,
 } from 'react';
 import pkg from '../../../package.json';
-import { type Idioma, type Textos } from '../i18n';
+import {
+  OPCIONES_IDIOMA,
+  type Idioma,
+  type Textos,
+} from '../i18n';
 import {
   COLORES_TEMA_PRESET,
   esColorPreset,
@@ -19,6 +23,7 @@ import {
 import {
   INTERVALOS_ACTUALIZACION,
   type IntervaloActualizacion,
+  type ModoApariencia,
 } from '../preferencias';
 
 export function PantallaAjustes(props: {
@@ -27,14 +32,18 @@ export function PantallaAjustes(props: {
   idioma: Idioma;
   t: Textos;
   colorTema: string;
+  modoApariencia: ModoApariencia;
   mostrarDescargaMp3: boolean;
+  mostrarSliderVolumen: boolean;
   modoCompacto: boolean;
   intervalo: IntervaloActualizacion;
   backButtonRef?: Ref<HTMLButtonElement>;
   onVolver: () => void;
   onCambiarIdioma: (idioma: Idioma) => void;
   onCambiarColor: (color: string) => void;
+  onCambiarModoApariencia: (modoApariencia: ModoApariencia) => void;
   onCambiarMostrarDescargaMp3: (mostrar: boolean) => void;
+  onCambiarMostrarSliderVolumen: (mostrar: boolean) => void;
   onCambiarModoCompacto: (compacto: boolean) => void;
   onCambiarIntervalo: (intervalo: IntervaloActualizacion) => void;
 }) {
@@ -44,11 +53,15 @@ export function PantallaAjustes(props: {
     colorTema,
     idioma,
     intervalo,
+    modoApariencia,
     mostrarDescargaMp3,
+    mostrarSliderVolumen,
     modoCompacto,
     onCambiarColor,
     onCambiarIdioma,
+    onCambiarModoApariencia,
     onCambiarMostrarDescargaMp3,
+    onCambiarMostrarSliderVolumen,
     onCambiarModoCompacto,
     onCambiarIntervalo,
     onVolver,
@@ -62,8 +75,12 @@ export function PantallaAjustes(props: {
   const intervaloId = useId();
   const intervaloDescId = useId();
   const temaId = useId();
+  const aparienciaId = useId();
+  const aparienciaDescId = useId();
   const descargaId = useId();
   const descargaDescId = useId();
+  const volumenId = useId();
+  const volumenDescId = useId();
   const modoCompactoId = useId();
   const modoCompactoDescId = useId();
   const atajosId = useId();
@@ -78,10 +95,7 @@ export function PantallaAjustes(props: {
 
   const mostrarGuardado = () => setGuardado(true);
 
-  const opcionesIdioma = [
-    { value: 'es' as Idioma, label: t.idiomaEspanol },
-    { value: 'en' as Idioma, label: t.idiomaIngles },
-  ];
+  const opcionesIdioma = OPCIONES_IDIOMA;
 
   const etiquetaIntervalo = (ms: IntervaloActualizacion) =>
     ms === 2000 ? t.seg2 : ms === 4000 ? t.seg4 : t.seg8;
@@ -174,6 +188,41 @@ export function PantallaAjustes(props: {
         </Seccion>
 
         <Seccion
+          titulo={t.modoApariencia}
+          tituloId={aparienciaId}
+          desc={t.modoAparienciaDesc}
+          descId={aparienciaDescId}>
+          <div
+            className="flex gap-2"
+            role="group"
+            aria-labelledby={aparienciaId}
+            aria-describedby={aparienciaDescId}>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={modoApariencia === 'dark' ? 'true' : 'false'}
+              aria-pressed={modoApariencia === 'dark'}
+              onClick={() => {
+                onCambiarModoApariencia('dark');
+                mostrarGuardado();
+              }}>
+              {t.modoOscuro}
+            </button>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={modoApariencia === 'light' ? 'true' : 'false'}
+              aria-pressed={modoApariencia === 'light'}
+              onClick={() => {
+                onCambiarModoApariencia('light');
+                mostrarGuardado();
+              }}>
+              {t.modoClaro}
+            </button>
+          </div>
+        </Seccion>
+
+        <Seccion
           titulo={t.botonDescargaMp3}
           tituloId={descargaId}
           desc={t.botonDescargaMp3Desc}
@@ -201,6 +250,41 @@ export function PantallaAjustes(props: {
               aria-pressed={!mostrarDescargaMp3}
               onClick={() => {
                 onCambiarMostrarDescargaMp3(false);
+                mostrarGuardado();
+              }}>
+              {t.ocultar}
+            </button>
+          </div>
+        </Seccion>
+
+        <Seccion
+          titulo={t.sliderVolumen}
+          tituloId={volumenId}
+          desc={t.sliderVolumenDesc}
+          descId={volumenDescId}>
+          <div
+            className="flex gap-2"
+            role="group"
+            aria-labelledby={volumenId}
+            aria-describedby={volumenDescId}>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={mostrarSliderVolumen ? 'true' : 'false'}
+              aria-pressed={mostrarSliderVolumen}
+              onClick={() => {
+                onCambiarMostrarSliderVolumen(true);
+                mostrarGuardado();
+              }}>
+              {t.mostrar}
+            </button>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={!mostrarSliderVolumen ? 'true' : 'false'}
+              aria-pressed={!mostrarSliderVolumen}
+              onClick={() => {
+                onCambiarMostrarSliderVolumen(false);
                 mostrarGuardado();
               }}>
               {t.ocultar}
@@ -248,7 +332,7 @@ export function PantallaAjustes(props: {
           tituloId={atajosId}
           desc={t.atajosDesc}
           descId={atajosDescId}>
-          <p className="m-0 rounded-[10px] border border-white/8 bg-white/4 px-3 py-2 font-mono text-[0.7rem] leading-relaxed text-marfil/50">
+          <p className="m-0 whitespace-pre-line rounded-[10px] border border-white/8 bg-white/4 px-3 py-2 font-mono text-[0.7rem] leading-relaxed text-marfil/50">
             {t.atajosDetalle}
           </p>
         </Seccion>

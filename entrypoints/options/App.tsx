@@ -7,15 +7,19 @@ import {
 } from '../popup/tema';
 import {
   type IntervaloActualizacion,
+  type ModoApariencia,
 } from '../popup/preferencias';
 import {
   guardarColorTema,
   guardarIdioma,
   guardarIntervalo,
+  guardarModoApariencia,
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
+  guardarMostrarSliderVolumen,
   type PreferenciasPersistidas,
 } from '../popup/storage';
+import { aplicarModoAparienciaDocumento } from '../popup/documento';
 import { PantallaAjustes } from '../popup/componentes/PantallaAjustes';
 
 export default function OpcionesApp(props: { preferenciasIniciales: PreferenciasPersistidas }) {
@@ -23,7 +27,9 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
 
   const [idioma, setIdioma] = useState<Idioma>(preferenciasIniciales.idioma);
   const [colorTema, setColorTema] = useState(preferenciasIniciales.colorTema);
+  const [modoApariencia, setModoApariencia] = useState<ModoApariencia>(preferenciasIniciales.modoApariencia);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
+  const [mostrarSliderVolumen, setMostrarSliderVolumen] = useState(preferenciasIniciales.mostrarSliderVolumen);
   const [intervaloActualizacion, setIntervaloActualizacion] =
     useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
   const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
@@ -34,6 +40,10 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
     document.documentElement.lang = idioma;
     document.title = `${t.ajustes} | ${t.appNombre}`;
   }, [idioma, t]);
+
+  useEffect(() => {
+    aplicarModoAparienciaDocumento(modoApariencia);
+  }, [modoApariencia]);
 
   const variablesTema = useMemo<CSSProperties>(() => {
     const rgb = hexARgb(colorTema);
@@ -51,6 +61,11 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
     setColorTema(normalizado);
   }
 
+  function cambiarModoApariencia(nuevoModo: ModoApariencia) {
+    void guardarModoApariencia(nuevoModo);
+    setModoApariencia(nuevoModo);
+  }
+
   function cambiarIntervalo(nuevo: IntervaloActualizacion) {
     void guardarIntervalo(nuevo);
     setIntervaloActualizacion(nuevo);
@@ -59,6 +74,11 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
   function cambiarMostrarDescargaMp3(mostrar: boolean) {
     void guardarMostrarDescargaMp3(mostrar);
     setMostrarDescargaMp3(mostrar);
+  }
+
+  function cambiarMostrarSliderVolumen(mostrar: boolean) {
+    void guardarMostrarSliderVolumen(mostrar);
+    setMostrarSliderVolumen(mostrar);
   }
 
   function cambiarModoCompacto(compacto: boolean) {
@@ -75,13 +95,17 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
           idioma={idioma}
           t={t}
           colorTema={colorTema}
+          modoApariencia={modoApariencia}
           mostrarDescargaMp3={mostrarDescargaMp3}
+          mostrarSliderVolumen={mostrarSliderVolumen}
           modoCompacto={modoCompacto}
           intervalo={intervaloActualizacion}
           onVolver={() => window.close()}
           onCambiarIdioma={cambiarIdioma}
           onCambiarColor={cambiarColorTema}
+          onCambiarModoApariencia={cambiarModoApariencia}
           onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
+          onCambiarMostrarSliderVolumen={cambiarMostrarSliderVolumen}
           onCambiarModoCompacto={cambiarModoCompacto}
           onCambiarIntervalo={cambiarIntervalo}
         />

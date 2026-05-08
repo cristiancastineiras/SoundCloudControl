@@ -108,6 +108,20 @@
     min-width: 0;
   }
 
+  body[data-ui-mode='light'] {
+    background:
+      radial-gradient(circle at top, rgb(255 85 0 / 0.12), transparent 28%),
+      linear-gradient(180deg, #fffdf9 0%, #efe7de 100%);
+    color: #19130d;
+    --color-marfil: #19130d;
+    --color-sc-white: #19130d;
+    --color-sc-black: #fffaf4;
+    --color-sc-grey-1: #ffffff;
+    --color-sc-grey-2: #ddd6cc;
+    --color-sc-grey-3: #766f66;
+    --color-sc-grey-4: #4b453e;
+  }
+
   button, input, textarea, select, a { font: inherit; }
 
   button:focus-visible,
@@ -568,6 +582,111 @@
   .sc-theme-ui button,
   .sc-theme-ui button svg,
   .sc-theme-ui button span { color: var(--color-sc-white); }
+
+  body[data-ui-mode='light'] .sc-card {
+    background:
+      radial-gradient(circle at top left, rgb(var(--sc-theme-rgb) / 0.14), transparent 34%),
+      linear-gradient(145deg, #fffdf9 0%, #f5eee7 58%, #efe7de 100%);
+    box-shadow: 0 22px 44px rgb(53 33 9 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.78);
+  }
+
+  body[data-ui-mode='light'] .sc-veil {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.4) 34%, rgb(247 241 234 / 0.95) 100%),
+      linear-gradient(90deg, rgb(255 255 255 / 0.18), transparent 40%, rgb(255 255 255 / 0.14) 100%);
+  }
+
+  body[data-ui-mode='light'] .sc-pattern {
+    opacity: 0.18;
+  }
+
+  body[data-ui-mode='light'] .sc-panel-bg {
+    background:
+      radial-gradient(circle at top right, rgb(var(--sc-theme-rgb) / 0.12), transparent 38%),
+      linear-gradient(180deg, rgb(255 251 246 / 0.98) 0%, rgb(241 234 225 / 0.98) 100%);
+  }
+
+  body[data-ui-mode='light'] .sc-section-title {
+    color: rgb(25 19 13 / 0.5);
+  }
+
+  body[data-ui-mode='light'] .sc-section-desc {
+    color: rgb(25 19 13 / 0.62);
+  }
+
+  body[data-ui-mode='light'] .sc-meta-pill,
+  body[data-ui-mode='light'] .sc-btn-icon,
+  body[data-ui-mode='light'] .sc-btn-back,
+  body[data-ui-mode='light'] .sc-btn,
+  body[data-ui-mode='light'] .sc-btn-soft,
+  body[data-ui-mode='light'] .sc-btn-mode,
+  body[data-ui-mode='light'] .sc-btn-xs,
+  body[data-ui-mode='light'] .sc-btn-download,
+  body[data-ui-mode='light'] .sc-chip,
+  body[data-ui-mode='light'] .sc-select {
+    background-color: rgb(255 255 255 / 0.78);
+    border-color: rgb(25 19 13 / 0.12);
+    color: #19130d;
+  }
+
+  body[data-ui-mode='light'] .sc-btn:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-btn-soft:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-btn-mode:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-btn-xs:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-btn-download:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-chip:hover,
+  body[data-ui-mode='light'] .sc-select:hover,
+  body[data-ui-mode='light'] .sc-meta-pill:hover:not(:disabled),
+  body[data-ui-mode='light'] .sc-btn-icon:hover,
+  body[data-ui-mode='light'] .sc-btn-back:hover {
+    border-color: rgb(25 19 13 / 0.24);
+    color: #0f0c09;
+  }
+
+  body[data-ui-mode='light'] .sc-btn-mode[data-active='true'],
+  body[data-ui-mode='light'] .sc-btn-xs[data-active='true'] {
+    color: #2f1706;
+  }
+
+  body[data-ui-mode='light'] .sc-chip[data-active='true'],
+  body[data-ui-mode='light'] .sc-btn-mode[data-active='true'][data-variant='soft'],
+  body[data-ui-mode='light'] .sc-btn-xs[data-active='true'][data-variant='soft'] {
+    color: #221208;
+  }
+
+  body[data-ui-mode='light'] .sc-select option {
+    background-color: #fffdf9;
+    color: #19130d;
+  }
+
+  body[data-ui-mode='light'] .slider-volumen::-webkit-slider-thumb,
+  body[data-ui-mode='light'] .slider-volumen::-moz-range-thumb,
+  body[data-ui-mode='light'] .slider-equalizer::-webkit-slider-thumb,
+  body[data-ui-mode='light'] .slider-equalizer::-moz-range-thumb {
+    background: #19130d;
+    border-color: rgb(255 255 255 / 0.92);
+    box-shadow: 0 3px 10px rgb(50 31 8 / 0.16);
+  }
+
+  body[data-ui-mode='light'] .slider-equalizer {
+    background-color: rgb(25 19 13 / 0.08);
+  }
+
+  body[data-ui-mode='light'] .sc-btn-download[data-state='error'] {
+    color: #8d2d1e;
+  }
+
+  body[data-ui-mode='light'] .sc-theme-ui [class*='border-white/'] {
+    border-color: rgb(25 19 13 / 0.12) !important;
+  }
+
+  body[data-ui-mode='light'] .sc-theme-ui [class*='bg-white/'] {
+    background-color: rgb(255 255 255 / 0.78) !important;
+  }
+
+  body[data-ui-mode='light'] .sc-theme-ui [class*='bg-black/'] {
+    background-color: rgb(255 255 255 / 0.88) !important;
+  }
 }
 
 /* =============================================================================
