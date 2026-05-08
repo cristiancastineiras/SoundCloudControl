@@ -1,14 +1,11 @@
-import type {
-  EstadoVista,
-  RespuestaPopup,
-} from '../../lib/contratos';
-import type { Textos } from './i18n';
-
-export function unirClases(
-  ...clases: Array<string | false | null | undefined>
-) {
-  return clases.filter(Boolean).join(' ');
-}
+/**
+ * Etiquetas y clases visuales derivadas del estado del reproductor.
+ * Vive en features/reproductor porque combina dominio (EstadoVista) con
+ * traducciones (i18n) — ambas dependencias son válidas a este nivel.
+ */
+import type { EstadoVista } from '@/entities/reproductor';
+import type { RespuestaPopup } from '@/services/mensajeria';
+import type { Textos } from '@/features/i18n';
 
 export function etiquetaEstado(respuesta: RespuestaPopup, t: Textos) {
   switch (respuesta.estadoVista) {

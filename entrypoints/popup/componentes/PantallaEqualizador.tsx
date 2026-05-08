@@ -1,6 +1,6 @@
 import { ArrowLeft } from '@phosphor-icons/react';
 import { type CSSProperties, type Ref, useId } from 'react';
-import type { RespuestaEqualizador } from '../../../lib/contratos';
+import type { RespuestaEqualizador } from '@/services/mensajeria';
 import {
   BANDAS_EQUALIZADOR,
   GANANCIA_EQUALIZADOR_MAX,
@@ -9,9 +9,9 @@ import {
   PASO_EQUALIZADOR,
   type IdBandaEqualizador,
   type IdPresetEqualizador,
-} from '../../../lib/equalizer';
-import type { Textos } from '../i18n';
-import { unirClases } from '../utilidades';
+} from '@/entities/equalizador';
+import type { Textos } from '@/features/i18n';
+import { unirClases } from '@/shared';
 
 export function PantallaEqualizador(props: {
   panelId: string;

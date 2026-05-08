@@ -11,13 +11,16 @@ import { GearSix, SlidersHorizontal, X } from '@phosphor-icons/react';
 import {
   ACCIONES_REPRODUCTOR,
   MODOS_REPETICION,
+  obtenerImagenGrande,
   type AccionReproductor,
   type EstadoCancion,
+} from '@/entities/reproductor';
+import {
   type RespuestaDescarga,
   type RespuestaEqualizador,
   type RespuestaPopup,
   type SolicitudPopup,
-} from '../../lib/contratos';
+} from '@/services/mensajeria';
 import {
   crearAjustesEqualizadorDesdePreset,
   crearEstadoEqualizador,
@@ -25,22 +28,19 @@ import {
   type AjustesEqualizador,
   type IdBandaEqualizador,
   type IdPresetEqualizador,
-} from '../../lib/equalizer';
-import { obtenerImagenGrande } from '../../lib/soundcloud';
+} from '@/entities/equalizador';
 import {
   type Idioma,
   TEXTOS,
   type Textos,
-} from './i18n';
+} from '@/features/i18n';
 import {
   hexARgb,
   normalizarColorTema,
   rgbATripleta,
-} from './tema';
-import {
   type IntervaloActualizacion,
   type ModoApariencia,
-} from './preferencias';
+} from '@/entities/preferencias';
 import {
   guardarColorTema,
   guardarIdioma,
@@ -49,27 +49,29 @@ import {
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
   guardarMostrarSliderVolumen,
+  guardarMostrarControlVelocidad,
   guardarVersionNotifVista,
   leerVersionNotifVista,
   type PreferenciasPersistidas,
-} from './storage';
+} from '@/services/almacenamiento';
 import {
   aplicarLayoutCompactoPopup,
   aplicarModoAparienciaDocumento,
   obtenerAnchoPopup,
   programarSincronizacionTamanoPopup,
-} from './documento';
+} from '@/app/documento';
 import { AccionesEstado } from './componentes/AccionesEstado';
 import { BloqueCancion } from './componentes/BloqueCancion';
 import { BotonSeguirArtista } from './componentes/BotonSeguirArtista';
 import { CabeceraPopup } from './componentes/CabeceraPopup';
 import { ControlVolumen } from './componentes/ControlVolumen';
+import { ControlVelocidad } from './componentes/ControlVelocidad';
 import { ControlesReproductor } from './componentes/ControlesReproductor';
 import { FondoPortada } from './componentes/FondoPortada';
 import { IconoControl } from './componentes/IconoControl';
 import { PantallaAjustes } from './componentes/PantallaAjustes';
 import { PantallaEqualizador } from './componentes/PantallaEqualizador';
-import { etiquetaEstado } from './utilidades';
+import { etiquetaEstado } from '@/features/reproductor';
 
 // ---- Constantes de IDs (a11y) ----------------------------------------------
 const ID_TITULO_POPUP = 'sc-popup-title';
@@ -97,6 +99,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const [modoApariencia, setModoApariencia] = useState<ModoApariencia>(preferenciasIniciales.modoApariencia);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
   const [mostrarSliderVolumen, setMostrarSliderVolumen] = useState(preferenciasIniciales.mostrarSliderVolumen);
+  const [mostrarControlVelocidad, setMostrarControlVelocidad] = useState(preferenciasIniciales.mostrarControlVelocidad);
   const [intervaloActualizacion, setIntervaloActualizacion] = useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
   const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
   const [versionLatest, setVersionLatest] = useState<string | null>(null);
@@ -119,6 +122,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const [estadoDescarga, setEstadoDescarga] = useState<EstadoDescarga>(null);
   const [guardandoEqualizador, setGuardandoEqualizador] = useState(false);
   const [volumenTemporal, setVolumenTemporal] = useState<number | null>(null);
+  const [velocidadTemporal, setVelocidadTemporal] = useState<number | null>(null);
 
   // ---- Refs ----------------------------------------------------------------
   const botonAjustesRef = useRef<HTMLButtonElement | null>(null);
@@ -128,6 +132,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   const popupRootRef = useRef<HTMLElement | null>(null);
   const vistaAnteriorRef = useRef<Vista>('principal');
   const revisionVolumenRef = useRef(0);
+  const revisionVelocidadRef = useRef(0);
   const revisionEqualizadorRef = useRef(0);
   const temporizadorEqualizadorRef = useRef<number | null>(null);
   const ajustesEqualizadorPendientesRef = useRef<AjustesEqualizador | null>(null);
@@ -293,6 +298,9 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
       ? volumenTemporal === 0
       : cancion.silenciado
     : false;
+  const velocidadVisible = cancion
+    ? velocidadTemporal ?? cancion.velocidadReproduccion ?? 1
+    : 1;
 
   useEffect(() => {
     aplicarModoAparienciaDocumento(modoApariencia);
@@ -333,6 +341,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
     idioma,
     modoApariencia,
     mostrarSliderVolumen,
+    mostrarControlVelocidad,
     notifActualizacionVisible,
     respuesta.estadoVista,
     respuestaEqualizador.estadoVista,
@@ -561,6 +570,31 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
     }
   }
 
+  async function ajustarVelocidad(velocidad: number) {
+    const revision = revisionVelocidadRef.current + 1;
+    revisionVelocidadRef.current = revision;
+    setVelocidadTemporal(velocidad);
+
+    try {
+      const siguienteEstado = await enviarMensaje<RespuestaPopup>({
+        canal: 'soundcloud-control',
+        destino: 'background',
+        tipo: 'ajustar-velocidad',
+        velocidad,
+      });
+
+      if (revision !== revisionVelocidadRef.current) return;
+      setRespuesta(siguienteEstado);
+    } catch {
+      if (revision !== revisionVelocidadRef.current) return;
+      void cargarEstado(true);
+    } finally {
+      if (revision === revisionVelocidadRef.current) {
+        setVelocidadTemporal(null);
+      }
+    }
+  }
+
   function cambiarIdioma(nuevoIdioma: Idioma) {
     void guardarIdioma(nuevoIdioma);
     setIdioma(nuevoIdioma);
@@ -590,6 +624,11 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
   function cambiarMostrarSliderVolumen(mostrar: boolean) {
     void guardarMostrarSliderVolumen(mostrar);
     setMostrarSliderVolumen(mostrar);
+  }
+
+  function cambiarMostrarControlVelocidad(mostrar: boolean) {
+    void guardarMostrarControlVelocidad(mostrar);
+    setMostrarControlVelocidad(mostrar);
   }
 
   function cambiarModoCompacto(compacto: boolean) {
@@ -750,6 +789,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
             modoApariencia={modoApariencia}
             mostrarDescargaMp3={mostrarDescargaMp3}
             mostrarSliderVolumen={mostrarSliderVolumen}
+            mostrarControlVelocidad={mostrarControlVelocidad}
             modoCompacto={modoCompacto}
             intervalo={intervaloActualizacion}
             backButtonRef={botonVolverRef}
@@ -759,6 +799,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
             onCambiarModoApariencia={cambiarModoApariencia}
             onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
             onCambiarMostrarSliderVolumen={cambiarMostrarSliderVolumen}
+            onCambiarMostrarControlVelocidad={cambiarMostrarControlVelocidad}
             onCambiarModoCompacto={cambiarModoCompacto}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
@@ -893,6 +934,18 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
               </div>
             ) : null}
 
+            {respuesta.estadoVista === 'disponible' && cancion && mostrarControlVelocidad ? (
+              <div className="border-t border-white/8 px-3.5 py-2.5">
+                <ControlVelocidad
+                  compacto
+                  velocidad={velocidadVisible}
+                  bloqueado={controlesBloqueados}
+                  t={t}
+                  onCambiarVelocidad={ajustarVelocidad}
+                />
+              </div>
+            ) : null}
+
             {/* Update notification */}
             {notifActualizacionVisible && versionLatest && (
               <div className="flex items-center gap-2 border-t border-white/8 px-3.5 py-2">
@@ -962,6 +1015,15 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                     bloqueado={respuesta.estadoVista !== 'disponible'}
                     t={t}
                     onCambiarVolumen={ajustarVolumen}
+                  />
+                ) : null}
+
+                {mostrarControlVelocidad ? (
+                  <ControlVelocidad
+                    velocidad={velocidadVisible}
+                    bloqueado={controlesBloqueados}
+                    t={t}
+                    onCambiarVelocidad={ajustarVelocidad}
                   />
                 ) : null}
               </>

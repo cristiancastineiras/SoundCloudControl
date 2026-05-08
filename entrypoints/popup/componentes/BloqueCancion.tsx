@@ -1,6 +1,8 @@
-import type { EstadoCancion, RespuestaPopup } from '../../../lib/contratos';
-import type { Textos } from '../i18n';
-import { mensajeSecundario, unirClases } from '../utilidades';
+import type { EstadoCancion } from '@/entities/reproductor';
+import type { RespuestaPopup } from '@/services/mensajeria';
+import type { Textos } from '@/features/i18n';
+import { unirClases } from '@/shared';
+import { mensajeSecundario } from '@/features/reproductor';
 import { BotonSeguirArtista } from './BotonSeguirArtista';
 
 export function BloqueCancion(props: {

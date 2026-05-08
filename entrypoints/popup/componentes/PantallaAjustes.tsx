@@ -15,16 +15,14 @@ import {
   OPCIONES_IDIOMA,
   type Idioma,
   type Textos,
-} from '../i18n';
+} from '@/features/i18n';
 import {
   COLORES_TEMA_PRESET,
   esColorPreset,
-} from '../tema';
-import {
   INTERVALOS_ACTUALIZACION,
   type IntervaloActualizacion,
   type ModoApariencia,
-} from '../preferencias';
+} from '@/entities/preferencias';
 
 export function PantallaAjustes(props: {
   panelId: string;
@@ -35,6 +33,7 @@ export function PantallaAjustes(props: {
   modoApariencia: ModoApariencia;
   mostrarDescargaMp3: boolean;
   mostrarSliderVolumen: boolean;
+  mostrarControlVelocidad: boolean;
   modoCompacto: boolean;
   intervalo: IntervaloActualizacion;
   backButtonRef?: Ref<HTMLButtonElement>;
@@ -44,6 +43,7 @@ export function PantallaAjustes(props: {
   onCambiarModoApariencia: (modoApariencia: ModoApariencia) => void;
   onCambiarMostrarDescargaMp3: (mostrar: boolean) => void;
   onCambiarMostrarSliderVolumen: (mostrar: boolean) => void;
+  onCambiarMostrarControlVelocidad: (mostrar: boolean) => void;
   onCambiarModoCompacto: (compacto: boolean) => void;
   onCambiarIntervalo: (intervalo: IntervaloActualizacion) => void;
 }) {
@@ -56,12 +56,14 @@ export function PantallaAjustes(props: {
     modoApariencia,
     mostrarDescargaMp3,
     mostrarSliderVolumen,
+    mostrarControlVelocidad,
     modoCompacto,
     onCambiarColor,
     onCambiarIdioma,
     onCambiarModoApariencia,
     onCambiarMostrarDescargaMp3,
     onCambiarMostrarSliderVolumen,
+    onCambiarMostrarControlVelocidad,
     onCambiarModoCompacto,
     onCambiarIntervalo,
     onVolver,
@@ -81,6 +83,8 @@ export function PantallaAjustes(props: {
   const descargaDescId = useId();
   const volumenId = useId();
   const volumenDescId = useId();
+  const velocidadId = useId();
+  const velocidadDescId = useId();
   const modoCompactoId = useId();
   const modoCompactoDescId = useId();
   const atajosId = useId();
@@ -285,6 +289,41 @@ export function PantallaAjustes(props: {
               aria-pressed={!mostrarSliderVolumen}
               onClick={() => {
                 onCambiarMostrarSliderVolumen(false);
+                mostrarGuardado();
+              }}>
+              {t.ocultar}
+            </button>
+          </div>
+        </Seccion>
+
+        <Seccion
+          titulo={t.controlVelocidad}
+          tituloId={velocidadId}
+          desc={t.controlVelocidadDesc}
+          descId={velocidadDescId}>
+          <div
+            className="flex gap-2"
+            role="group"
+            aria-labelledby={velocidadId}
+            aria-describedby={velocidadDescId}>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={mostrarControlVelocidad ? 'true' : 'false'}
+              aria-pressed={mostrarControlVelocidad}
+              onClick={() => {
+                onCambiarMostrarControlVelocidad(true);
+                mostrarGuardado();
+              }}>
+              {t.mostrar}
+            </button>
+            <button
+              type="button"
+              className="sc-chip"
+              data-active={!mostrarControlVelocidad ? 'true' : 'false'}
+              aria-pressed={!mostrarControlVelocidad}
+              onClick={() => {
+                onCambiarMostrarControlVelocidad(false);
                 mostrarGuardado();
               }}>
               {t.ocultar}

@@ -1,4 +1,4 @@
-import type { ModoApariencia } from './preferencias';
+import type { ModoApariencia } from '@/entities/preferencias';
 
 const ANCHO_POPUP_NORMAL = 312;
 const ANCHO_POPUP_COMPACTO = 480;

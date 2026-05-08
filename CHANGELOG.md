@@ -3,6 +3,21 @@
 Todos los cambios importantes del proyecto se documentan aquí.
 Plantilla: https://keepachangelog.com/en/1.0.0/
 
+## [1.6.0] - 2026-05-08
+
+### Added
+- Nueva arquitectura por capas bajo `src/` (`app`, `shared`, `entities`, `services`, `infrastructure`, `features`) con aliases `@/` para modularizar dominio, mensajería, persistencia e inyección.
+- Nuevo control de velocidad en el popup con UI dedicada y sincronización con MAIN world para mantener `playbackRate` frente a reseteos de SoundCloud.
+- Documento de arquitectura del proyecto en `ARCHITECTURE.md`.
+
+### Changed
+- Migración de utilidades y contratos legacy desde `lib/` y `entrypoints/popup/*` a módulos tipados en `src/`.
+- Integración del bootstrap del popup y de la configuración de Vite/TS para resolver imports por capas.
+
+### Fixed
+- Sincronización de volumen/velocidad en el content script para evitar estados desalineados entre popup, control nativo de SoundCloud y elemento `<audio>`.
+- Ajuste de velocidad robusto con ciclo rápido mute/unmute previo para forzar la aplicación del cambio en cada uso.
+
 ## [1.5.1] - 2026-05-08
 
 ### Fixed

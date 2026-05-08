@@ -1,10 +1,10 @@
-import type { SolicitudBackground } from './contratos';
+import type { SolicitudBackground } from '@/services/mensajeria';
 import {
   crearEstadoEqualizador,
   normalizarAjustesEqualizador,
   type AjustesEqualizador,
   type EstadoEqualizador,
-} from './equalizer';
+} from '@/entities/equalizador';
 import {
   CANAL_LISTO_EQUALIZADOR,
   CANAL_RESPUESTA_EQUALIZADOR,
@@ -12,7 +12,7 @@ import {
   esMensajeListoEqualizador,
   esRespuestaPuenteEqualizador,
   type SolicitudPuenteEqualizador,
-} from './equalizerBridge';
+} from './canales';
 
 const PREFIJO_LOG_EQ = '[EQ][CS]';
 const TIEMPO_ESPERA_SOLICITUD_MS = 1500;

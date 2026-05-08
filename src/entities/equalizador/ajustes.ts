@@ -1,3 +1,11 @@
+/**
+ * Configuración del equalizador.
+ *
+ * Pure domain: tipos, constantes, factories y normalización.
+ * Sin acceso a Web Audio ni browser APIs (eso vive en
+ * `services/puenteEqualizador`).
+ */
+
 export const GANANCIA_EQUALIZADOR_MIN = -12;
 export const GANANCIA_EQUALIZADOR_MAX = 12;
 export const PASO_EQUALIZADOR = 0.5;
@@ -68,61 +76,29 @@ export const PRESETS_EQUALIZADOR = {
   bassBoost: {
     preamp: -1,
     bandas: crearBandas({
-      hz32: 6,
-      hz64: 5,
-      hz125: 3.5,
-      hz250: 1.5,
-      hz500: 0,
-      hz1000: -1,
-      hz2000: -1.5,
-      hz4000: -1,
-      hz8000: 0.5,
-      hz16000: 1,
+      hz32: 6, hz64: 5, hz125: 3.5, hz250: 1.5, hz500: 0,
+      hz1000: -1, hz2000: -1.5, hz4000: -1, hz8000: 0.5, hz16000: 1,
     }),
   },
   vocal: {
     preamp: 0,
     bandas: crearBandas({
-      hz32: -2,
-      hz64: -1.5,
-      hz125: -1,
-      hz250: 0.5,
-      hz500: 2,
-      hz1000: 3,
-      hz2000: 3.5,
-      hz4000: 2.5,
-      hz8000: 1,
-      hz16000: 0,
+      hz32: -2, hz64: -1.5, hz125: -1, hz250: 0.5, hz500: 2,
+      hz1000: 3, hz2000: 3.5, hz4000: 2.5, hz8000: 1, hz16000: 0,
     }),
   },
   electronic: {
     preamp: -0.5,
     bandas: crearBandas({
-      hz32: 4,
-      hz64: 3,
-      hz125: 1,
-      hz250: -1,
-      hz500: -1.5,
-      hz1000: 0,
-      hz2000: 1.5,
-      hz4000: 2.5,
-      hz8000: 3,
-      hz16000: 2,
+      hz32: 4, hz64: 3, hz125: 1, hz250: -1, hz500: -1.5,
+      hz1000: 0, hz2000: 1.5, hz4000: 2.5, hz8000: 3, hz16000: 2,
     }),
   },
   brillo: {
     preamp: -0.5,
     bandas: crearBandas({
-      hz32: -2,
-      hz64: -1,
-      hz125: 0,
-      hz250: 0,
-      hz500: 0.5,
-      hz1000: 1,
-      hz2000: 2,
-      hz4000: 3,
-      hz8000: 4.5,
-      hz16000: 5,
+      hz32: -2, hz64: -1, hz125: 0, hz250: 0, hz500: 0.5,
+      hz1000: 1, hz2000: 2, hz4000: 3, hz8000: 4.5, hz16000: 5,
     }),
   },
 } as const;
@@ -141,7 +117,6 @@ export function crearAjustesEqualizadorDesdePreset(
   presetId: IdPresetEqualizador,
 ): AjustesEqualizador {
   const preset = PRESETS_EQUALIZADOR[presetId];
-
   return {
     habilitado: false,
     presetId,
@@ -165,10 +140,7 @@ export function clonarAjustesEqualizador(
 }
 
 export function normalizarGananciaEqualizador(valor: number) {
-  if (!Number.isFinite(valor)) {
-    return 0;
-  }
-
+  if (!Number.isFinite(valor)) return 0;
   const valorAjustado = Math.round(valor / PASO_EQUALIZADOR) * PASO_EQUALIZADOR;
   return Math.max(
     GANANCIA_EQUALIZADOR_MIN,
@@ -189,12 +161,8 @@ export function inferirPresetEqualizador(
     const coincideBandas = BANDAS_EQUALIZADOR.every(
       ({ id }) => ajustes.bandas[id] === preset.bandas[id],
     );
-
-    if (coincidePreamp && coincideBandas) {
-      return presetId;
-    }
+    if (coincidePreamp && coincideBandas) return presetId;
   }
-
   return 'personalizado';
 }
 
@@ -249,25 +217,16 @@ export function mezclarAjustesEqualizador(
   return normalizarAjustesEqualizador({
     ...base,
     ...parche,
-    bandas: {
-      ...base.bandas,
-      ...parche.bandas,
-    },
+    bandas: { ...base.bandas, ...parche.bandas },
   });
 }
 
 function normalizarEstadoContexto(
   valor: string | null | undefined,
 ): EstadoContextoEqualizador {
-  if (
-    valor === 'running' ||
-    valor === 'suspended' ||
-    valor === 'closed' ||
-    valor === 'unavailable'
-  ) {
+  if (valor === 'running' || valor === 'suspended' || valor === 'closed' || valor === 'unavailable') {
     return valor;
   }
-
   return 'unavailable';
 }
 
@@ -276,12 +235,26 @@ export function crearEstadoEqualizador(
 ): EstadoEqualizador {
   const ajustes = normalizarAjustesEqualizador(valor);
   const posibleEstado = valor as Partial<EstadoEqualizador> | undefined;
-
   return {
     ...ajustes,
     audioDetectado: Boolean(posibleEstado?.audioDetectado),
     procesando: Boolean(posibleEstado?.procesando),
     requiereInteraccion: Boolean(posibleEstado?.requiereInteraccion),
     estadoContexto: normalizarEstadoContexto(posibleEstado?.estadoContexto),
+  };
+}
+
+/**
+ * Resumen serializable de unos ajustes para uso en logs.
+ * Filtra bandas a 0 para no inundar la consola.
+ */
+export function resumirAjustesEqualizador(origen: AjustesEqualizador) {
+  return {
+    habilitado: origen.habilitado,
+    presetId: origen.presetId,
+    preamp: origen.preamp,
+    bandasActivas: Object.entries(origen.bandas)
+      .filter(([, ganancia]) => ganancia !== 0)
+      .map(([id, ganancia]) => `${id}:${ganancia}`),
   };
 }

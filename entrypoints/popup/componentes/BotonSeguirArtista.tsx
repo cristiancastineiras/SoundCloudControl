@@ -1,5 +1,5 @@
-import type { Textos } from '../i18n';
-import { unirClases } from '../utilidades';
+import type { Textos } from '@/features/i18n';
+import { unirClases } from '@/shared';
 import { IconoControl } from './IconoControl';
 
 export function BotonSeguirArtista(props: {

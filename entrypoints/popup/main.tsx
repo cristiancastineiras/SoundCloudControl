@@ -4,8 +4,8 @@ import './style.css';
 import {
   aplicarLayoutCompactoPopup,
   aplicarModoAparienciaDocumento,
-} from './documento';
-import { cargarPreferenciasPersistidas } from './storage.ts';
+} from '@/app/documento';
+import { cargarPreferenciasPersistidas } from '@/services/almacenamiento';
 
 async function bootstrap() {
   const preferenciasIniciales = await cargarPreferenciasPersistidas();

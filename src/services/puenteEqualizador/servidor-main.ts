@@ -6,13 +6,13 @@ import {
   type EstadoContextoEqualizador,
   type EstadoEqualizador,
   type IdBandaEqualizador,
-} from './equalizer';
+} from '@/entities/equalizador';
 import {
   CANAL_LISTO_EQUALIZADOR,
   CANAL_RESPUESTA_EQUALIZADOR,
   esSolicitudPuenteEqualizador,
   type RespuestaPuenteEqualizador,
-} from './equalizerBridge';
+} from './canales';
 
 const PREFIJO_LOG_EQ = '[EQ][PAGE]';
 const MARCADOR_GLOBAL = '__scEqMainLoaded';

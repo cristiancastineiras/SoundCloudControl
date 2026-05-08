@@ -1,4 +1,4 @@
-import type { AjustesEqualizador, EstadoEqualizador } from './equalizer';
+import type { AjustesEqualizador, EstadoEqualizador } from '@/entities/equalizador';
 
 export const CANAL_SOLICITUD_EQUALIZADOR = 'soundcloud-control:eq-request';
 export const CANAL_RESPUESTA_EQUALIZADOR = 'soundcloud-control:eq-response';

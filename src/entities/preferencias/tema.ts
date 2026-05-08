@@ -1,21 +1,13 @@
 /**
  * Tema de color del popup.
  *
- * Agrupa en un solo módulo:
- *   - Constantes de la paleta secundaria oficial de SoundCloud (Media Kit).
- *   - Helpers de conversión (hex → RGB, mezcla con blanco, etc.).
- *
- * Mantenerlo aquí evita duplicar la lógica entre la capa de persistencia,
- * App.tsx y los componentes
- * que necesitan color de tema (PantallaAjustes, ControlesReproductor…).
+ * Constantes de la paleta secundaria oficial de SoundCloud (Media Kit) y
+ * helpers de conversión hex ↔ RGB. Sin acceso al DOM ni a storage.
  */
 
 export const COLOR_TEMA_POR_DEFECTO = '#ff5500';
 
-/**
- * Paleta secundaria oficial de SoundCloud (Media Kit).
- * El primer color es el naranja principal de la marca.
- */
+/** Paleta secundaria oficial de SoundCloud (Media Kit). */
 export const COLORES_TEMA_PRESET = [
   '#ff5500', // SoundCloud Orange
   '#dcf400', // Lime
@@ -34,11 +26,9 @@ export type Rgb = { r: number; g: number; b: number };
 export function normalizarColorTema(valor: string | null | undefined): string {
   // Compatibilidad hacia atrás con la versión que guardaba "naranja".
   if (valor === 'naranja') return COLOR_TEMA_POR_DEFECTO;
-
   if (typeof valor === 'string' && /^#[0-9a-fA-F]{6}$/.test(valor)) {
     return valor.toLowerCase();
   }
-
   return COLOR_TEMA_POR_DEFECTO;
 }
 

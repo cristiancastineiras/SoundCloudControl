@@ -3,23 +3,22 @@ import {
   type Idioma,
   normalizarIdioma,
   obtenerIdiomaNavegador,
-} from './i18n';
+} from '@/features/i18n';
 import {
   COLOR_TEMA_POR_DEFECTO,
   normalizarColorTema,
-} from './tema';
-import {
   INTERVALO_POR_DEFECTO,
   MODO_APARIENCIA_POR_DEFECTO,
   MODO_COMPACTO_POR_DEFECTO,
   esModoAparienciaValido,
   MOSTRAR_DESCARGA_MP3_POR_DEFECTO,
   MOSTRAR_SLIDER_VOLUMEN_POR_DEFECTO,
+  MOSTRAR_CONTROL_VELOCIDAD_POR_DEFECTO,
   VERSION_NOTIF_VISTA_POR_DEFECTO,
   esIntervaloValido,
   type IntervaloActualizacion,
   type ModoApariencia,
-} from './preferencias';
+} from '@/entities/preferencias';
 
 const CLAVE_LEGACY_MIGRADA = 'local:legacy-settings-migrated';
 const CLAVE_IDIOMA = 'local:idioma';
@@ -28,6 +27,7 @@ const CLAVE_INTERVALO = 'local:intervalo';
 const CLAVE_MODO_APARIENCIA = 'local:modo-apariencia';
 const CLAVE_MOSTRAR_DESCARGA_MP3 = 'local:mostrar-descarga-mp3';
 const CLAVE_MOSTRAR_SLIDER_VOLUMEN = 'local:mostrar-slider-volumen';
+const CLAVE_MOSTRAR_CONTROL_VELOCIDAD = 'local:mostrar-control-velocidad';
 const CLAVE_MODO_COMPACTO = 'local:modo-compacto';
 const CLAVE_VERSION_NOTIF_VISTA = 'local:version-notif-vista';
 
@@ -66,6 +66,10 @@ const mostrarSliderVolumenItem = storage.defineItem<boolean>(CLAVE_MOSTRAR_SLIDE
   fallback: MOSTRAR_SLIDER_VOLUMEN_POR_DEFECTO,
 });
 
+const mostrarControlVelocidadItem = storage.defineItem<boolean>(CLAVE_MOSTRAR_CONTROL_VELOCIDAD, {
+  fallback: MOSTRAR_CONTROL_VELOCIDAD_POR_DEFECTO,
+});
+
 const modoCompactoItem = storage.defineItem<boolean>(CLAVE_MODO_COMPACTO, {
   fallback: MODO_COMPACTO_POR_DEFECTO,
 });
@@ -81,6 +85,7 @@ export type PreferenciasPersistidas = {
   intervaloActualizacion: IntervaloActualizacion;
   mostrarDescargaMp3: boolean;
   mostrarSliderVolumen: boolean;
+  mostrarControlVelocidad: boolean;
   modoCompacto: boolean;
 };
 
@@ -131,13 +136,14 @@ export async function migrarPreferenciasLegacy(): Promise<void> {
 export async function cargarPreferenciasPersistidas(): Promise<PreferenciasPersistidas> {
   await migrarPreferenciasLegacy();
 
-  const [idioma, colorTema, modoApariencia, intervaloActualizacion, mostrarDescargaMp3, mostrarSliderVolumen, modoCompacto] = await Promise.all([
+  const [idioma, colorTema, modoApariencia, intervaloActualizacion, mostrarDescargaMp3, mostrarSliderVolumen, mostrarControlVelocidad, modoCompacto] = await Promise.all([
     idiomaItem.getValue(),
     colorTemaItem.getValue(),
     modoAparienciaItem.getValue(),
     intervaloItem.getValue(),
     mostrarDescargaMp3Item.getValue(),
     mostrarSliderVolumenItem.getValue(),
+    mostrarControlVelocidadItem.getValue(),
     modoCompactoItem.getValue(),
   ]);
 
@@ -152,6 +158,7 @@ export async function cargarPreferenciasPersistidas(): Promise<PreferenciasPersi
       : INTERVALO_POR_DEFECTO,
     mostrarDescargaMp3,
     mostrarSliderVolumen,
+    mostrarControlVelocidad,
     modoCompacto,
   };
 }
@@ -210,6 +217,15 @@ export async function leerMostrarSliderVolumen(): Promise<boolean> {
 
 export async function guardarMostrarSliderVolumen(mostrar: boolean): Promise<void> {
   await mostrarSliderVolumenItem.setValue(mostrar);
+}
+
+export async function leerMostrarControlVelocidad(): Promise<boolean> {
+  await migrarPreferenciasLegacy();
+  return mostrarControlVelocidadItem.getValue();
+}
+
+export async function guardarMostrarControlVelocidad(mostrar: boolean): Promise<void> {
+  await mostrarControlVelocidadItem.setValue(mostrar);
 }
 
 export async function leerModoCompacto(): Promise<boolean> {

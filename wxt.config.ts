@@ -1,6 +1,11 @@
 import preact from '@preact/preset-vite';
 import tailwindcss from '@tailwindcss/vite';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'wxt';
+
+const directorioRaiz = path.dirname(fileURLToPath(import.meta.url));
+const rutaSrc = (segmento: string) => path.resolve(directorioRaiz, 'src', segmento);
 
 export default defineConfig({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +75,16 @@ export default defineConfig({
       : {}),
   } as never),
   vite: (env) => ({
+    resolve: {
+      alias: {
+        '@/app': rutaSrc('app'),
+        '@/shared': rutaSrc('shared'),
+        '@/entities': rutaSrc('entities'),
+        '@/services': rutaSrc('services'),
+        '@/infrastructure': rutaSrc('infrastructure'),
+        '@/features': rutaSrc('features'),
+      },
+    },
     plugins: [
       preact({
         prefreshEnabled: env.mode === 'development',

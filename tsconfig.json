@@ -10,7 +10,18 @@
       "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
       "react/jsx-dev-runtime": ["./node_modules/preact/jsx-runtime"],
       "react-dom": ["./node_modules/preact/compat/"],
-      "react-dom/*": ["./node_modules/preact/compat/*"]
+      "react-dom/*": ["./node_modules/preact/compat/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/shared": ["./src/shared/index.ts"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/entities": ["./src/entities/index.ts"],
+      "@/entities/*": ["./src/entities/*"],
+      "@/services": ["./src/services/index.ts"],
+      "@/services/*": ["./src/services/*"],
+      "@/infrastructure": ["./src/infrastructure/index.ts"],
+      "@/infrastructure/*": ["./src/infrastructure/*"],
+      "@/features": ["./src/features/index.ts"],
+      "@/features/*": ["./src/features/*"]
     }
   }
 }

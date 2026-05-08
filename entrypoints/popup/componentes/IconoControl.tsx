@@ -2,6 +2,7 @@ import {
   ArrowClockwise,
   ArrowSquareOut,
   DownloadSimple,
+  Gauge,
   HeartStraight,
   Pause,
   Play,
@@ -16,7 +17,7 @@ import {
   UserPlus,
   type IconProps,
 } from '@phosphor-icons/react';
-import { unirClases } from '../utilidades';
+import { unirClases } from '@/shared';
 
 const ICONOS_CONTROL = {
   anterior: SkipBack,
@@ -34,6 +35,7 @@ const ICONOS_CONTROL = {
   abrir: ArrowSquareOut,
   recargar: ArrowClockwise,
   descargar: DownloadSimple,
+  velocidad: Gauge,
 } as const;
 
 export type NombreIcono = keyof typeof ICONOS_CONTROL;
