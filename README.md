@@ -1,6 +1,15 @@
 # SoundCloud Control
 
-![SoundCloud Control icon](./public/icon/128.png)
+<p align="start">
+  <a href="">
+    <img src="./assets/get-extension/get-in-chrome.svg" height="80">
+  </a>
+  
+  <a href="https://addons.mozilla.org/es-ES/firefox/addon/soundcloud-control/">
+    <img src="./assets/get-extension/get-in-firefox.svg" height="80">
+  </a>
+</p>
+
 
 ### Controla SoundCloud sin cambiar de pestaña
 
