@@ -1,7 +1,5 @@
 # Privacy Policy
 
-**Last updated: 2026-05-08**
-
 ## Summary
 
 SoundCloud Control does not collect, store, or transmit any personal data.

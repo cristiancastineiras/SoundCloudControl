@@ -3,6 +3,17 @@
 Todos los cambios importantes del proyecto se documentan aquí.
 Plantilla: https://keepachangelog.com/en/1.0.0/
 
+## [1.5.0] - 2026-05-08
+
+### Added
+- Control deslizante de volumen sincronizado con el estado real de SoundCloud, accesible desde el popup.
+- Botón de seguir/dejar de seguir al artista actual con UI optimista e integración directa con el DOM de SoundCloud.
+- Modo de apariencia claro/oscuro: selector en ajustes con persistencia; modo claro con sobreescrituras completas del sistema de diseño `sc-*`.
+- Soporte para 20 idiomas en la interfaz: español, inglés, portugués, francés, alemán, italiano, neerlandés, ruso, árabe, turco, hindi, bengalí, urdu, chino simplificado, chino tradicional, japonés, coreano, indonesio, tailandés y vietnamita. El idioma se detecta automáticamente del navegador y se puede cambiar en ajustes.
+
+### Fixed
+- Resize dinámico del popup en Chrome: se usa `ResizeObserver` para detectar el ancho real y aplicar el modo compacto correctamente, evitando el ancho obsoleto que Chrome cachea entre vistas.
+
 ## [1.4.1] - 2026-05-08
 
 ### Fixed
