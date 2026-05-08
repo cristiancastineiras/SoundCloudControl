@@ -12,6 +12,8 @@ import {
   SkipForward,
   SpeakerHigh,
   SpeakerSimpleSlash,
+  UserCheck,
+  UserPlus,
   type IconProps,
 } from '@phosphor-icons/react';
 import { unirClases } from '../utilidades';
@@ -22,6 +24,8 @@ const ICONOS_CONTROL = {
   pausa: Pause,
   siguiente: SkipForward,
   corazon: HeartStraight,
+  seguir: UserPlus,
+  siguiendo: UserCheck,
   aleatorio: Shuffle,
   repetirLista: Repeat,
   repetirPista: RepeatOnce,

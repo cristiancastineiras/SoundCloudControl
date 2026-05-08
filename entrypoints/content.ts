@@ -24,6 +24,10 @@ const SELECTORES = {
     '.playControls__soundBadge .sc-button-like',
     '.playbackSoundBadge .sc-button-like',
   ],
+  botonSeguir: [
+    '.playControls__soundBadge .sc-button-follow',
+    '.playbackSoundBadge .sc-button-follow',
+  ],
   botonReproduccion: [
     '.playControls__play',
     'button.playControls__play',
@@ -142,6 +146,9 @@ async function ejecutarAccion(accion: AccionReproductor) {
     case ACCIONES_REPRODUCTOR.alternarMeGusta:
       buscarElemento<HTMLButtonElement>(SELECTORES.botonMeGusta)?.click();
       break;
+    case ACCIONES_REPRODUCTOR.alternarSeguirArtista:
+      buscarElemento<HTMLElement>(SELECTORES.botonSeguir)?.click();
+      break;
     case ACCIONES_REPRODUCTOR.establecerRepeticionLista:
       return ajustarModoRepeticion(MODOS_REPETICION.lista);
     case ACCIONES_REPRODUCTOR.establecerRepeticionPista:
@@ -176,11 +183,13 @@ function obtenerEstadoActual(): EstadoCancion | null {
 
   const botonAleatorio = buscarElemento<HTMLButtonElement>(SELECTORES.botonAleatorio);
   const botonMeGusta = buscarElemento<HTMLButtonElement>(SELECTORES.botonMeGusta);
+  const botonSeguir = buscarElemento<HTMLElement>(SELECTORES.botonSeguir);
   const botonRepeticion = buscarElemento<HTMLButtonElement>(SELECTORES.botonRepeticion);
   const audioPrincipal = obtenerAudioPrincipal();
   const titulo = leerTexto(enlaceCancion);
   const artista = leerTexto(enlaceArtista);
   const estadoVolumen = obtenerEstadoVolumen(audioPrincipal);
+  const estadoSeguimiento = obtenerEstadoSeguimiento(botonSeguir);
 
   if (!titulo) {
     return null;
@@ -192,6 +201,8 @@ function obtenerEstadoActual(): EstadoCancion | null {
     urlArtista: enlaceArtista?.href ?? null,
     urlCancion: enlaceCancion.href ?? null,
     urlImagen: obtenerUrlImagen(),
+    puedeSeguirArtista: estadoSeguimiento.puedeSeguirArtista,
+    siguiendoArtista: estadoSeguimiento.siguiendoArtista,
     reproduciendo: estaReproduciendo(botonReproduccion),
     meGustaActivo: Boolean(
       botonMeGusta?.classList.contains('sc-button-selected') ||
@@ -204,10 +215,48 @@ function obtenerEstadoActual(): EstadoCancion | null {
   };
 }
 
+function obtenerEstadoSeguimiento(botonSeguimiento: HTMLElement | null) {
+  if (!botonSeguimiento) {
+    return {
+      puedeSeguirArtista: false,
+      siguiendoArtista: false,
+    };
+  }
+
+  const estilo = window.getComputedStyle(botonSeguimiento);
+  const puedeSeguirArtista =
+    estilo.display !== 'none' &&
+    estilo.visibility !== 'hidden';
+
+  if (!puedeSeguirArtista) {
+    return {
+      puedeSeguirArtista: false,
+      siguiendoArtista: false,
+    };
+  }
+
+  const etiqueta = (
+    botonSeguimiento.getAttribute('aria-label') ??
+    botonSeguimiento.getAttribute('title') ??
+    botonSeguimiento.textContent ??
+    ''
+  ).trim().toLowerCase();
+
+  const siguiendoArtista =
+    botonSeguimiento.getAttribute('aria-pressed') === 'true' ||
+    botonSeguimiento.classList.contains('sc-button-selected') ||
+    /unfollow|following|dejar de seguir|siguiendo/.test(etiqueta);
+
+  return {
+    puedeSeguirArtista: true,
+    siguiendoArtista,
+  };
+}
+
 async function ajustarVolumen(volumen: number) {
   const volumenNormalizado = normalizarVolumen(volumen);
 
-  if (!ajustarVolumenDesdeControl(volumenNormalizado)) {
+  if (!await ajustarVolumenDesdeControl(volumenNormalizado)) {
     const audioPrincipal = obtenerAudioPrincipal();
 
     if (!audioPrincipal) {
@@ -216,6 +265,12 @@ async function ajustarVolumen(volumen: number) {
 
     audioPrincipal.volume = volumenNormalizado / 100;
     audioPrincipal.muted = volumenNormalizado === 0;
+  } else if (volumenNormalizado > 0) {
+    const audioPrincipal = obtenerAudioPrincipal();
+
+    if (audioPrincipal) {
+      audioPrincipal.muted = false;
+    }
   }
 
   if (volumenNormalizado > 0) {
@@ -394,8 +449,8 @@ function obtenerEstadoVolumenDesdeControl(audioPrincipal: HTMLAudioElement | nul
   return null;
 }
 
-function ajustarVolumenDesdeControl(volumen: number) {
-  const sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+async function ajustarVolumenDesdeControl(volumen: number) {
+  const sliderVolumen = await asegurarControlVolumenVisible();
 
   if (!sliderVolumen) {
     return false;
@@ -420,6 +475,42 @@ function ajustarVolumenDesdeControl(volumen: number) {
   }
 
   return ajustarVolumenConTeclado(sliderVolumen, volumen);
+}
+
+async function asegurarControlVolumenVisible() {
+  let sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+
+  if (esControlVolumenVisible(sliderVolumen)) {
+    return sliderVolumen;
+  }
+
+  const botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
+
+  if (!botonVolumen) {
+    return sliderVolumen;
+  }
+
+  botonVolumen.click();
+  await esperar(100);
+
+  sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+  return esControlVolumenVisible(sliderVolumen) ? sliderVolumen : null;
+}
+
+function esControlVolumenVisible(sliderVolumen: HTMLElement | null) {
+  if (!sliderVolumen) {
+    return false;
+  }
+
+  const estilo = window.getComputedStyle(sliderVolumen);
+  const rectangulo = sliderVolumen.getBoundingClientRect();
+
+  return (
+    estilo.display !== 'none' &&
+    estilo.visibility !== 'hidden' &&
+    rectangulo.width > 0 &&
+    rectangulo.height > 0
+  );
 }
 
 function ajustarVolumenConTeclado(sliderVolumen: HTMLElement, volumenObjetivo: number) {

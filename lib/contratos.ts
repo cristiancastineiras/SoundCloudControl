@@ -23,6 +23,7 @@ export const ACCIONES_REPRODUCTOR = {
   alternarReproduccion: 'alternar-reproduccion',
   siguienteCancion: 'siguiente-cancion',
   alternarMeGusta: 'alternar-me-gusta',
+  alternarSeguirArtista: 'alternar-seguir-artista',
   alternarAleatorio: 'alternar-aleatorio',
   alternarSilencio: 'alternar-silencio',
   establecerRepeticionLista: 'establecer-repeticion-lista',
@@ -60,6 +61,8 @@ export interface EstadoCancion {
   urlArtista: string | null;
   urlCancion: string | null;
   urlImagen: string | null;
+  puedeSeguirArtista: boolean;
+  siguiendoArtista: boolean;
   reproduciendo: boolean;
   meGustaActivo: boolean;
   aleatorioActivo: boolean;
