@@ -1,11 +1,15 @@
 # SoundCloud Control
 
 <p align="start">
-  <a href="">
+  <a 
+  href=""
+  target="_blank"
+  >
     <img src="./assets/get-extension/get-in-chrome.svg" height="80">
   </a>
   
-  <a href="https://addons.mozilla.org/es-ES/firefox/addon/soundcloud-control/">
+  <a 
+  href="https://addons.mozilla.org/es-ES/firefox/addon/soundcloud-control/" target="_blank">
     <img src="./assets/get-extension/get-in-firefox.svg" height="80">
   </a>
 </p>
