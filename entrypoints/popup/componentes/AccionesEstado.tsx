@@ -1,4 +1,4 @@
-import type { Textos } from '../i18n';
+import type { Textos } from '@/features/i18n';
 import { IconoControl } from './IconoControl';
 
 export function AccionesEstado(props: {

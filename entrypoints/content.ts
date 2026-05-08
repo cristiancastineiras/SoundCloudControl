@@ -1,15 +1,22 @@
 import {
   ACCIONES_REPRODUCTOR,
   MODOS_REPETICION,
-  esSolicitudContenido,
   type AccionReproductor,
   type EstadoCancion,
   type ModoRepeticion,
+} from '@/entities/reproductor';
+import {
+  esSolicitudContenido,
   type SolicitudContenido,
-} from '../lib/contratos';
-import { crearGestorEqualizadorContenido } from '../lib/equalizerContenido';
+} from '@/services/mensajeria';
+import { crearGestorEqualizadorContenido } from '@/services/puenteEqualizador';
+import { publicarVelocidadObjetivo } from '@/services/velocidadCliente';
 
 let ultimoVolumenAudible = 0.6;
+let ultimaVelocidadObjetivo = 1;
+
+const TOLERANCIA_SINCRONIZACION_VOLUMEN = 6;
+
 const gestorEqualizador = crearGestorEqualizadorContenido();
 
 const SELECTORES = {
@@ -114,6 +121,10 @@ async function gestionarSolicitud(solicitud: SolicitudContenido) {
     return ajustarVolumen(solicitud.volumen);
   }
 
+  if (solicitud.tipo === 'ajustar-velocidad') {
+    return ajustarVelocidad(solicitud.velocidad);
+  }
+
   if (solicitud.tipo === 'obtener-equalizador') {
     return gestorEqualizador.obtenerEstado();
   }
@@ -212,6 +223,7 @@ function obtenerEstadoActual(): EstadoCancion | null {
     modoRepeticion: obtenerModoRepeticion(botonRepeticion),
     volumen: estadoVolumen.volumen,
     silenciado: estadoVolumen.silenciado,
+    velocidadReproduccion: obtenerVelocidadReproduccion(audioPrincipal),
   };
 }
 
@@ -255,30 +267,93 @@ function obtenerEstadoSeguimiento(botonSeguimiento: HTMLElement | null) {
 
 async function ajustarVolumen(volumen: number) {
   const volumenNormalizado = normalizarVolumen(volumen);
+  const audioPrincipal = obtenerAudioPrincipal();
+  let controlSincronizado = false;
 
-  if (!await ajustarVolumenDesdeControl(volumenNormalizado)) {
-    const audioPrincipal = obtenerAudioPrincipal();
+  try {
+    controlSincronizado = await ajustarVolumenDesdeControl(volumenNormalizado);
+  } catch {
+    controlSincronizado = false;
+  }
 
-    if (!audioPrincipal) {
-      return obtenerEstadoActual();
-    }
+  if (audioPrincipal) {
+    const estadoTrasControl = controlSincronizado
+      ? obtenerEstadoVolumen(audioPrincipal)
+      : null;
+    const requiereFallbackAudio =
+      !estadoTrasControl ||
+      Math.abs(estadoTrasControl.volumen - volumenNormalizado) >
+        TOLERANCIA_SINCRONIZACION_VOLUMEN ||
+      (volumenNormalizado > 0 && estadoTrasControl.silenciado);
 
-    audioPrincipal.volume = volumenNormalizado / 100;
-    audioPrincipal.muted = volumenNormalizado === 0;
-  } else if (volumenNormalizado > 0) {
-    const audioPrincipal = obtenerAudioPrincipal();
-
-    if (audioPrincipal) {
-      audioPrincipal.muted = false;
+    if (requiereFallbackAudio) {
+      aplicarVolumenDirecto(audioPrincipal, volumenNormalizado);
     }
   }
 
-  if (volumenNormalizado > 0) {
-    ultimoVolumenAudible = volumenNormalizado / 100;
-  }
-
-  await esperar(120);
+  await esperar(controlSincronizado ? 90 : 60);
   return obtenerEstadoActual();
+}
+
+async function ajustarVelocidad(velocidad: number) {
+  const velocidadNormalizada = normalizarVelocidad(velocidad);
+  const audioPrincipal = obtenerAudioPrincipal();
+  const botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
+
+  await forzarCicloMuteUnmuteVelocidad(audioPrincipal, botonVolumen);
+
+  ultimaVelocidadObjetivo = publicarVelocidadObjetivo(velocidadNormalizada);
+
+  if (audioPrincipal) {
+    try {
+      audioPrincipal.playbackRate = ultimaVelocidadObjetivo;
+    } catch {
+      // Si el setter falla en este world, el MAIN world lo aplicará igualmente.
+    }
+  }
+
+  // SoundCloud reescribe `audio.playbackRate` desde su propio bundle (MAIN
+  // world). Desde aquí (ISOLATED) no podemos contrarrestarlo. Delegamos al
+  // `velocidadMainWorld.ts` vía postMessage — ese script vive en MAIN world
+  // y mantiene la velocidad fijada incluso cuando SC intenta resetearla.
+  ultimaVelocidadObjetivo = publicarVelocidadObjetivo(velocidadNormalizada);
+  await esperar(40);
+  return obtenerEstadoActual();
+}
+
+async function forzarCicloMuteUnmuteVelocidad(
+  audioPrincipal: HTMLAudioElement | null,
+  botonVolumen: HTMLButtonElement | null,
+) {
+  if (botonVolumen) {
+    botonVolumen.click();
+    await esperar(18);
+    botonVolumen.click();
+    await esperar(18);
+    return;
+  }
+
+  if (!audioPrincipal) {
+    return;
+  }
+
+  const estabaSilenciado = audioPrincipal.muted;
+  const volumenOriginal = audioPrincipal.volume;
+
+  if (estabaSilenciado || volumenOriginal === 0) {
+    // Si ya estaba silenciado, disparamos el ciclo sin riesgo de audio
+    // audible dejando el volumen en 0 durante la breve reactivación.
+    audioPrincipal.volume = 0;
+    audioPrincipal.muted = false;
+    await esperar(18);
+    audioPrincipal.muted = true;
+    audioPrincipal.volume = volumenOriginal;
+    return;
+  }
+
+  audioPrincipal.muted = true;
+  await esperar(18);
+  audioPrincipal.muted = false;
 }
 
 async function alternarSilencio() {
@@ -381,8 +456,32 @@ function obtenerAudioPrincipal() {
   );
 }
 
+function obtenerVelocidadReproduccion(audioPrincipal: HTMLAudioElement | null) {
+  if (audioPrincipal && Number.isFinite(audioPrincipal.playbackRate)) {
+    ultimaVelocidadObjetivo = normalizarVelocidad(audioPrincipal.playbackRate);
+  }
+
+  return ultimaVelocidadObjetivo;
+}
+
 function obtenerEstadoVolumen(audioPrincipal: HTMLAudioElement | null) {
   const estadoDesdeControl = obtenerEstadoVolumenDesdeControl(audioPrincipal);
+  const estadoDesdeAudio = obtenerEstadoVolumenDesdeAudio(audioPrincipal);
+
+  if (estadoDesdeControl && estadoDesdeAudio) {
+    const estadoPreferido = hayDesincronizacionVolumen(
+      estadoDesdeControl,
+      estadoDesdeAudio,
+    )
+      ? estadoDesdeAudio
+      : estadoDesdeControl;
+
+    if (!estadoPreferido.silenciado && estadoPreferido.volumen > 0) {
+      ultimoVolumenAudible = estadoPreferido.volumen / 100;
+    }
+
+    return estadoPreferido;
+  }
 
   if (estadoDesdeControl) {
     if (!estadoDesdeControl.silenciado && estadoDesdeControl.volumen > 0) {
@@ -392,17 +491,12 @@ function obtenerEstadoVolumen(audioPrincipal: HTMLAudioElement | null) {
     return estadoDesdeControl;
   }
 
-  if (audioPrincipal) {
-    const volumen = normalizarVolumen(Math.round(audioPrincipal.volume * 100));
-
-    if (!audioPrincipal.muted && volumen > 0) {
-      ultimoVolumenAudible = audioPrincipal.volume;
+  if (estadoDesdeAudio) {
+    if (!estadoDesdeAudio.silenciado && estadoDesdeAudio.volumen > 0) {
+      ultimoVolumenAudible = estadoDesdeAudio.volumen / 100;
     }
 
-    return {
-      volumen,
-      silenciado: audioPrincipal.muted || volumen === 0,
-    };
+    return estadoDesdeAudio;
   }
 
   return {
@@ -449,15 +543,81 @@ function obtenerEstadoVolumenDesdeControl(audioPrincipal: HTMLAudioElement | nul
   return null;
 }
 
+function obtenerEstadoVolumenDesdeAudio(audioPrincipal: HTMLAudioElement | null) {
+  if (!audioPrincipal) {
+    return null;
+  }
+
+  const volumen = normalizarVolumen(Math.round(audioPrincipal.volume * 100));
+
+  return {
+    volumen,
+    silenciado: audioPrincipal.muted || volumen === 0,
+  };
+}
+
+function hayDesincronizacionVolumen(
+  estadoControl: { volumen: number; silenciado: boolean },
+  estadoAudio: { volumen: number; silenciado: boolean },
+) {
+  return (
+    Math.abs(estadoControl.volumen - estadoAudio.volumen) >
+      TOLERANCIA_SINCRONIZACION_VOLUMEN ||
+    (estadoControl.silenciado !== estadoAudio.silenciado &&
+      (estadoControl.volumen > 0 || estadoAudio.volumen > 0))
+  );
+}
+
+function aplicarVolumenDirecto(
+  audioPrincipal: HTMLAudioElement,
+  volumenNormalizado: number,
+) {
+  // Fallback fiable: si SoundCloud no refleja su slider a tiempo, al menos
+  // dejamos el audio real en el valor pedido y evitamos romper el popup.
+  audioPrincipal.volume = volumenNormalizado / 100;
+  audioPrincipal.muted = volumenNormalizado === 0;
+
+  if (volumenNormalizado > 0) {
+    ultimoVolumenAudible = volumenNormalizado / 100;
+  }
+}
+
 async function ajustarVolumenDesdeControl(volumen: number) {
-  const sliderVolumen = await asegurarControlVolumenVisible();
+  const audioPrincipal = obtenerAudioPrincipal();
+  let sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+  let botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
+  let contenedorVolumen = buscarElemento<HTMLElement>(SELECTORES.volumenContenedor);
+  const estadoAntes = obtenerEstadoVolumen(audioPrincipal);
+  let restaurarSonido = false;
+
+  if (!sliderVolumen && !botonVolumen) {
+    return false;
+  }
+
+  if (!esControlVolumenVisible(sliderVolumen) && volumen > 0 && botonVolumen) {
+    // Forzamos primero un mute para que SoundCloud reactive su propio control
+    // de volumen antes de mover el slider oculto.
+    if (!estadoAntes.silenciado) {
+      botonVolumen.click();
+      await esperar(80);
+    }
+
+    restaurarSonido = true;
+    sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+    botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
+    contenedorVolumen = buscarElemento<HTMLElement>(SELECTORES.volumenContenedor);
+  }
+
+  despertarControlVolumen(contenedorVolumen, sliderVolumen, botonVolumen);
 
   if (!sliderVolumen) {
-    return false;
+    return volumen <= 0 && Boolean(botonVolumen);
   }
 
   const rectangulo = sliderVolumen.getBoundingClientRect();
 
+  // Slider visible en pantalla (usuario haciendo hover en SC) → eventos de
+  // ratón para precisión exacta.
   if (rectangulo.height >= 12 && rectangulo.width >= 4) {
     const proporcion = volumen / 100;
     const margen = Math.min(6, rectangulo.height / 10);
@@ -469,79 +629,137 @@ async function ajustarVolumenDesdeControl(volumen: number) {
       rectangulo.bottom - margen,
     );
 
-    sliderVolumen.focus();
+    sliderVolumen.focus({ preventScroll: true });
     despacharSecuenciaDeslizante(sliderVolumen, clientX, clientY);
+
+    if (restaurarSonido && botonVolumen) {
+      await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
+    }
+
     return true;
   }
 
-  return ajustarVolumenConTeclado(sliderVolumen, volumen);
-}
-
-async function asegurarControlVolumenVisible() {
-  let sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
-
-  if (esControlVolumenVisible(sliderVolumen)) {
-    return sliderVolumen;
-  }
-
-  const botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
-
-  if (!botonVolumen) {
-    return sliderVolumen;
-  }
-
-  botonVolumen.click();
-  await esperar(100);
-
-  sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
-  return esControlVolumenVisible(sliderVolumen) ? sliderVolumen : null;
-}
-
-function esControlVolumenVisible(sliderVolumen: HTMLElement | null) {
-  if (!sliderVolumen) {
-    return false;
-  }
-
-  const estilo = window.getComputedStyle(sliderVolumen);
-  const rectangulo = sliderVolumen.getBoundingClientRect();
-
-  return (
-    estilo.display !== 'none' &&
-    estilo.visibility !== 'hidden' &&
-    rectangulo.width > 0 &&
-    rectangulo.height > 0
-  );
-}
-
-function ajustarVolumenConTeclado(sliderVolumen: HTMLElement, volumenObjetivo: number) {
-  const estadoActual = obtenerEstadoVolumenDesdeControl(obtenerAudioPrincipal());
-
-  if (!estadoActual) {
-    return false;
-  }
-
-  sliderVolumen.focus();
-
-  if (volumenObjetivo === 0 || volumenObjetivo === 100) {
-    const teclaExtremo = volumenObjetivo === 0 ? 'Home' : 'End';
-    despacharTecla(sliderVolumen, teclaExtremo);
-    return true;
-  }
-
-  const diferencia = volumenObjetivo - estadoActual.volumen;
+  // Slider oculto (SoundCloud muestra el control solo al hacer hover con el
+  // ratón físico). Usamos el atajo global Shift+ArrowUp/Down que SoundCloud
+  // procesa a nivel de documento y SÍ actualiza el aria-valuenow del slider.
+  // Cada pulsación equivale a un paso del 10 % del rango 0-100.
+  //
+  // Inspiración: IDEAS/competencia/src/contents/utils.js → volumeUp/Down()
+  const estadoActual = obtenerEstadoVolumen(audioPrincipal);
+  const volumenActual = estadoActual.volumen;
+  const diferencia = volumen - volumenActual;
 
   if (diferencia === 0) {
+    if (restaurarSonido && botonVolumen) {
+      await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
+    }
+
     return true;
   }
 
-  const teclaDireccion = diferencia > 0 ? 'ArrowUp' : 'ArrowDown';
-  const repeticiones = Math.max(1, Math.round(Math.abs(diferencia) / 10));
+  // Extremos: Home/End sobre el elemento del slider son más fiables.
+  if (volumen <= 0) {
+    sliderVolumen.focus({ preventScroll: true });
+    despacharTecla(sliderVolumen, 'Home');
+    return true;
+  }
 
-  for (let indice = 0; indice < repeticiones; indice += 1) {
-    despacharTecla(sliderVolumen, teclaDireccion, true);
+  if (volumen >= 100) {
+    sliderVolumen.focus({ preventScroll: true });
+    despacharTecla(sliderVolumen, 'End');
+    return true;
+  }
+
+  // Atajo global Shift+Arrow para valores intermedios.
+  const tecla = diferencia > 0 ? 'ArrowUp' : 'ArrowDown';
+  const pasos = Math.max(1, Math.round(Math.abs(diferencia) / 10));
+
+  document.body.focus();
+
+  for (let i = 0; i < pasos; i++) {
+    const opts: KeyboardEventInit = {
+      key: tecla,
+      code: tecla,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    };
+    document.dispatchEvent(new KeyboardEvent('keydown', opts));
+    document.dispatchEvent(new KeyboardEvent('keyup', opts));
+  }
+
+  if (restaurarSonido && botonVolumen) {
+    await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
   }
 
   return true;
+}
+
+async function restaurarSonidoTrasAjuste(
+  botonVolumen: HTMLButtonElement,
+  volumenObjetivo: number,
+  audioPrincipal: HTMLAudioElement | null,
+) {
+  if (volumenObjetivo <= 0) {
+    return;
+  }
+
+  await esperar(40);
+
+  if (obtenerEstadoVolumen(audioPrincipal).silenciado) {
+    botonVolumen.click();
+    await esperar(60);
+  }
+}
+
+function despertarControlVolumen(
+  ...objetivos: Array<HTMLElement | null | undefined>
+) {
+  for (const objetivo of objetivos) {
+    if (!objetivo) {
+      continue;
+    }
+
+    const rectangulo = objetivo.getBoundingClientRect();
+    const clientX = rectangulo.left + rectangulo.width / 2;
+    const clientY = rectangulo.top + rectangulo.height / 2;
+    const eventoBase: MouseEventInit = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      clientX,
+      clientY,
+    };
+
+    objetivo.dispatchEvent(new MouseEvent('mouseenter', eventoBase));
+    objetivo.dispatchEvent(new MouseEvent('mouseover', eventoBase));
+    objetivo.dispatchEvent(new MouseEvent('mousemove', eventoBase));
+  }
+}
+
+async function asegurarControlVolumenVisible() {
+  // DEPRECATED — mantenida por si hay un referencia pendiente pero ya no se
+  // invoca desde ajustarVolumenDesdeControl.
+  return buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+}
+
+function esControlVolumenVisible(sliderVolumen: HTMLElement | null) {
+  if (!sliderVolumen) return false;
+  const estilo = window.getComputedStyle(sliderVolumen);
+  const rect = sliderVolumen.getBoundingClientRect();
+  return (
+    estilo.display !== 'none' &&
+    estilo.visibility !== 'hidden' &&
+    rect.width > 0 &&
+    rect.height > 0
+  );
+}
+
+function ajustarVolumenConTeclado(_sliderVolumen: HTMLElement, _volumenObjetivo: number) {
+  // DEPRECATED — reemplazado por lógica inline en ajustarVolumenDesdeControl.
+  return false;
 }
 
 function despacharSecuenciaDeslizante(
@@ -755,6 +973,14 @@ function obtenerDescripcionControl(elemento: HTMLElement) {
 
 function normalizarVolumen(valor: number) {
   return Math.max(0, Math.min(100, Math.round(valor)));
+}
+
+function normalizarVelocidad(valor: number) {
+  if (!Number.isFinite(valor)) {
+    return 1;
+  }
+
+  return limitarNumero(Number(valor), 0.25, 4);
 }
 
 function buscarElemento<T extends Element>(

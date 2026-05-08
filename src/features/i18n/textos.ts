@@ -134,6 +134,8 @@ export type Textos = {
   botonDescargaMp3Desc: string;
   sliderVolumen: string;
   sliderVolumenDesc: string;
+  controlVelocidad: string;
+  controlVelocidadDesc: string;
   mostrar: string;
   ocultar: string;
   temaNaranja: string;
@@ -147,6 +149,8 @@ export type Textos = {
   descargando: string;
   descargaOk: string;
   descargaError: string;
+  velocidad: string;
+  velocidadActual: (vel: number) => string;
 };
 
 export const OPCIONES_IDIOMA: ReadonlyArray<{ value: Idioma; label: string }> = [
@@ -330,6 +334,8 @@ const TEXTOS_ES: Textos = {
     botonDescargaMp3Desc: 'Permite mostrar u ocultar el boton para descargar la pista en MP3 en la pantalla principal.',
     sliderVolumen: 'Slider de volumen',
     sliderVolumenDesc: 'Permite mostrar u ocultar el slider de volumen en la pantalla principal del popup.',
+    controlVelocidad: 'Control de velocidad',
+    controlVelocidadDesc: 'Permite mostrar u ocultar el control de velocidad de reproducción en el popup.',
     mostrar: 'Mostrar',
     ocultar: 'Ocultar',
     temaNaranja: 'Naranja (por defecto)',
@@ -345,6 +351,8 @@ const TEXTOS_ES: Textos = {
     descargando: 'Descargando…',
     descargaOk: '¡Descarga iniciada!',
     descargaError: 'Error al descargar',
+    velocidad: 'Velocidad',
+    velocidadActual: (vel: number) => `Velocidad: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_EN: Textos = {
@@ -465,6 +473,8 @@ const TEXTOS_EN: Textos = {
     botonDescargaMp3Desc: 'Lets you show or hide the button used to download the current track as MP3 on the main screen.',
     sliderVolumen: 'Volume slider',
     sliderVolumenDesc: 'Lets you show or hide the volume slider on the main popup screen.',
+    controlVelocidad: 'Speed control',
+    controlVelocidadDesc: 'Lets you show or hide the playback speed control in the popup.',
     mostrar: 'Show',
     ocultar: 'Hide',
     temaNaranja: 'Orange (default)',
@@ -480,6 +490,8 @@ const TEXTOS_EN: Textos = {
     descargando: 'Downloading…',
     descargaOk: 'Download started!',
     descargaError: 'Download failed',
+    velocidad: 'Speed',
+    velocidadActual: (vel: number) => `Speed: ${vel.toFixed(2)}x`,
   };
 
 const TEXTOS_PT: Textos = {
@@ -589,6 +601,8 @@ const TEXTOS_PT: Textos = {
   botonDescargaMp3Desc: 'Permite mostrar ou ocultar o botão para descarregar a faixa atual em MP3 no ecrã principal.',
   sliderVolumen: 'Slider de volume',
   sliderVolumenDesc: 'Permite mostrar ou ocultar o slider de volume no ecrã principal do popup.',
+  controlVelocidad: 'Controlo de velocidade',
+  controlVelocidadDesc: 'Permite mostrar ou ocultar o controlo de velocidade de reprodução no popup.',
   mostrar: 'Mostrar',
   ocultar: 'Ocultar',
   temaNaranja: 'Laranja (predefinido)',
@@ -602,6 +616,8 @@ const TEXTOS_PT: Textos = {
   descargando: 'A descarregar…',
   descargaOk: 'Download iniciado!',
   descargaError: 'Erro ao descarregar',
+  velocidad: 'Velocidade',
+  velocidadActual: (vel: number) => `Velocidade: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_FR: Textos = {
@@ -709,6 +725,8 @@ const TEXTOS_FR: Textos = {
   botonDescargaMp3Desc: 'Permet d’afficher ou de masquer le bouton pour télécharger le titre actuel en MP3 sur l’écran principal.',
   sliderVolumen: 'Curseur de volume',
   sliderVolumenDesc: 'Permet d’afficher ou de masquer le curseur de volume sur l’écran principal du popup.',
+  controlVelocidad: 'Contrôle de vitesse',
+  controlVelocidadDesc: 'Permet d’afficher ou de masquer le contrôle de vitesse de lecture dans le popup.',
   mostrar: 'Afficher',
   ocultar: 'Masquer',
   temaNaranja: 'Orange (par défaut)',
@@ -722,6 +740,8 @@ const TEXTOS_FR: Textos = {
   descargando: 'Téléchargement…',
   descargaOk: 'Téléchargement lancé !',
   descargaError: 'Échec du téléchargement',
+  velocidad: 'Vitesse',
+  velocidadActual: (vel: number) => `Vitesse : ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_DE: Textos = {
@@ -828,6 +848,8 @@ const TEXTOS_DE: Textos = {
   botonDescargaMp3Desc: 'Zeigt oder versteckt die Schaltfläche zum Herunterladen des aktuellen Tracks als MP3 auf dem Hauptbildschirm.',
   sliderVolumen: 'Lautstärke-Slider',
   sliderVolumenDesc: 'Zeigt oder versteckt den Lautstärke-Slider auf dem Hauptbildschirm des Popups.',
+  controlVelocidad: 'Geschwindigkeitssteuerung',
+  controlVelocidadDesc: 'Zeigt oder versteckt die Wiedergabegeschwindigkeitssteuerung im Popup.',
   mostrar: 'Anzeigen',
   ocultar: 'Ausblenden',
   temaNaranja: 'Orange (Standard)',
@@ -841,6 +863,8 @@ const TEXTOS_DE: Textos = {
   descargando: 'Wird heruntergeladen…',
   descargaOk: 'Download gestartet!',
   descargaError: 'Download fehlgeschlagen',
+  velocidad: 'Geschwindigkeit',
+  velocidadActual: (vel: number) => `Geschwindigkeit: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_IT: Textos = {
@@ -947,6 +971,8 @@ const TEXTOS_IT: Textos = {
   botonDescargaMp3Desc: 'Permette di mostrare o nascondere il pulsante per scaricare il brano attuale in MP3 nella schermata principale.',
   sliderVolumen: 'Slider volume',
   sliderVolumenDesc: 'Permette di mostrare o nascondere lo slider del volume nella schermata principale del popup.',
+  controlVelocidad: 'Controllo velocità',
+  controlVelocidadDesc: 'Permette di mostrare o nascondere il controllo della velocità di riproduzione nel popup.',
   mostrar: 'Mostra',
   ocultar: 'Nascondi',
   temaNaranja: 'Arancione (predefinito)',
@@ -960,6 +986,8 @@ const TEXTOS_IT: Textos = {
   descargando: 'Download in corso…',
   descargaOk: 'Download avviato!',
   descargaError: 'Download non riuscito',
+  velocidad: 'Velocità',
+  velocidadActual: (vel: number) => `Velocità: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_NL: Textos = {
@@ -1065,6 +1093,8 @@ const TEXTOS_NL: Textos = {
   botonDescargaMp3Desc: 'Laat je de knop tonen of verbergen om het huidige nummer als MP3 te downloaden op het hoofdscherm.',
   sliderVolumen: 'Volumeschuif',
   sliderVolumenDesc: 'Laat je de volumeschuif tonen of verbergen op het hoofdscherm van de popup.',
+  controlVelocidad: 'Snelheidsregeling',
+  controlVelocidadDesc: 'Laat je de afspeelsnelheidsregeling in de popup tonen of verbergen.',
   mostrar: 'Tonen',
   ocultar: 'Verbergen',
   temaNaranja: 'Oranje (standaard)',
@@ -1078,6 +1108,8 @@ const TEXTOS_NL: Textos = {
   descargando: 'Downloaden…',
   descargaOk: 'Download gestart!',
   descargaError: 'Download mislukt',
+  velocidad: 'Snelheid',
+  velocidadActual: (vel: number) => `Snelheid: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_RU: Textos = {
@@ -1187,6 +1219,8 @@ const TEXTOS_RU: Textos = {
   botonDescargaMp3Desc: 'Позволяет показать или скрыть кнопку загрузки текущего трека в MP3 на главном экране.',
   sliderVolumen: 'Ползунок громкости',
   sliderVolumenDesc: 'Позволяет показать или скрыть ползунок громкости на главном экране popup.',
+  controlVelocidad: 'Регулятор скорости',
+  controlVelocidadDesc: 'Позволяет показать или скрыть регулятор скорости воспроизведения в popup.',
   mostrar: 'Показать',
   ocultar: 'Скрыть',
   temaNaranja: 'Оранжевый (по умолчанию)',
@@ -1200,6 +1234,8 @@ const TEXTOS_RU: Textos = {
   descargando: 'Загрузка…',
   descargaOk: 'Загрузка началась!',
   descargaError: 'Ошибка загрузки',
+  velocidad: 'Скорость',
+  velocidadActual: (vel: number) => `Скорость: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_AR: Textos = {
@@ -1309,6 +1345,8 @@ const TEXTOS_AR: Textos = {
   botonDescargaMp3Desc: 'يتيح إظهار أو إخفاء زر تنزيل المقطع الحالي بصيغة MP3 في الشاشة الرئيسية.',
   sliderVolumen: 'منزلق الصوت',
   sliderVolumenDesc: 'يتيح إظهار أو إخفاء منزلق الصوت في الشاشة الرئيسية للنافذة المنبثقة.',
+  controlVelocidad: 'التحكم بالسرعة',
+  controlVelocidadDesc: 'يتيح إظهار أو إخفاء التحكم بسرعة التشغيل في النافذة المنبثقة.',
   mostrar: 'إظهار',
   ocultar: 'إخفاء',
   temaNaranja: 'برتقالي (افتراضي)',
@@ -1322,6 +1360,8 @@ const TEXTOS_AR: Textos = {
   descargando: 'جارٍ التنزيل…',
   descargaOk: 'بدأ التنزيل!',
   descargaError: 'فشل التنزيل',
+  velocidad: 'السرعة',
+  velocidadActual: (vel: number) => `السرعة: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_TR: Textos = {
@@ -1428,6 +1468,8 @@ const TEXTOS_TR: Textos = {
   botonDescargaMp3Desc: 'Ana ekranda mevcut parçayı MP3 olarak indirmek için kullanılan düğmeyi gösterip gizlemenizi sağlar.',
   sliderVolumen: 'Ses kaydırıcısı',
   sliderVolumenDesc: 'Popup ana ekranındaki ses kaydırıcısını gösterip gizlemenizi sağlar.',
+  controlVelocidad: 'Hız kontrolü',
+  controlVelocidadDesc: 'Popup\'ta oynatma hızı kontrolünü gösterip gizlemenizi sağlar.',
   mostrar: 'Göster',
   ocultar: 'Gizle',
   temaNaranja: 'Turuncu (varsayılan)',
@@ -1441,6 +1483,8 @@ const TEXTOS_TR: Textos = {
   descargando: 'İndiriliyor…',
   descargaOk: 'İndirme başlatıldı!',
   descargaError: 'İndirme başarısız',
+  velocidad: 'Hız',
+  velocidadActual: (vel: number) => `Hız: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_HI: Textos = {
@@ -1548,6 +1592,8 @@ const TEXTOS_HI: Textos = {
   botonDescargaMp3Desc: 'मुख्य स्क्रीन पर वर्तमान ट्रैक को MP3 में डाउनलोड करने वाले बटन को दिखाने या छिपाने देता है।',
   sliderVolumen: 'वॉल्यूम स्लाइडर',
   sliderVolumenDesc: 'पॉपअप की मुख्य स्क्रीन पर वॉल्यूम स्लाइडर को दिखाने या छिपाने देता है।',
+  controlVelocidad: 'गति नियंत्रण',
+  controlVelocidadDesc: 'पॉपअप में प्लेबैक गति नियंत्रण को दिखाने या छिपाने देता है।',
   mostrar: 'दिखाएँ',
   ocultar: 'छिपाएँ',
   temaNaranja: 'नारंगी (डिफ़ॉल्ट)',
@@ -1561,6 +1607,8 @@ const TEXTOS_HI: Textos = {
   descargando: 'डाउनलोड हो रहा है…',
   descargaOk: 'डाउनलोड शुरू हो गया!',
   descargaError: 'डाउनलोड विफल',
+  velocidad: 'गति',
+  velocidadActual: (vel: number) => `गति: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_BN: Textos = {
@@ -1656,6 +1704,8 @@ const TEXTOS_BN: Textos = {
   botonDescargaMp3Desc: 'মূল স্ক্রিনে বর্তমান ট্র্যাককে MP3 হিসেবে ডাউনলোড করার বোতাম দেখানো বা লুকানোর সুযোগ দেয়।',
   sliderVolumen: 'ভলিউম স্লাইডার',
   sliderVolumenDesc: 'পপআপের মূল স্ক্রিনে ভলিউম স্লাইডার দেখানো বা লুকানোর সুযোগ দেয়।',
+  controlVelocidad: 'গতি নিয়ন্ত্রণ',
+  controlVelocidadDesc: 'পপআপে প্লেব্যাক গতি নিয়ন্ত্রণ দেখানো বা লুকানোর সুযোগ দেয়।',
   mostrar: 'দেখান',
   ocultar: 'লুকান',
   temaNaranja: 'কমলা (ডিফল্ট)',
@@ -1669,6 +1719,8 @@ const TEXTOS_BN: Textos = {
   descargando: 'ডাউনলোড হচ্ছে…',
   descargaOk: 'ডাউনলোড শুরু হয়েছে!',
   descargaError: 'ডাউনলোড ব্যর্থ',
+  velocidad: 'গতি',
+  velocidadActual: (vel: number) => `গতি: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_UR: Textos = {
@@ -1761,6 +1813,8 @@ const TEXTOS_UR: Textos = {
   botonDescargaMp3Desc: 'مرکزی اسکرین پر موجودہ ٹریک کو MP3 میں ڈاؤن لوڈ کرنے والے بٹن کو دکھانے یا چھپانے دیتا ہے۔',
   sliderVolumen: 'والیوم سلائیڈر',
   sliderVolumenDesc: 'پاپ اپ کی مرکزی اسکرین پر والیوم سلائیڈر دکھانے یا چھپانے دیتا ہے۔',
+  controlVelocidad: 'رفتار کنٹرول',
+  controlVelocidadDesc: 'پاپ اپ میں پلے بیک رفتار کنٹرول دکھانے یا چھپانے دیتا ہے۔',
   mostrar: 'دکھائیں',
   ocultar: 'چھپائیں',
   temaNaranja: 'نارنجی (ڈیفالٹ)',
@@ -1774,6 +1828,8 @@ const TEXTOS_UR: Textos = {
   descargando: 'ڈاؤن لوڈ ہو رہا ہے…',
   descargaOk: 'ڈاؤن لوڈ شروع ہو گیا!',
   descargaError: 'ڈاؤن لوڈ ناکام',
+  velocidad: 'رفتار',
+  velocidadActual: (vel: number) => `رفتار: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_ZH_HANS: Textos = {
@@ -1866,6 +1922,8 @@ const TEXTOS_ZH_HANS: Textos = {
   botonDescargaMp3Desc: '允许在主界面显示或隐藏将当前曲目下载为 MP3 的按钮。',
   sliderVolumen: '音量滑块',
   sliderVolumenDesc: '允许在弹出页主界面显示或隐藏音量滑块。',
+  controlVelocidad: '速度控制',
+  controlVelocidadDesc: '允许在弹出页中显示或隐藏播放速度控制。',
   mostrar: '显示',
   ocultar: '隐藏',
   temaNaranja: '橙色（默认）',
@@ -1879,6 +1937,8 @@ const TEXTOS_ZH_HANS: Textos = {
   descargando: '下载中…',
   descargaOk: '下载已开始！',
   descargaError: '下载失败',
+  velocidad: '速度',
+  velocidadActual: (vel: number) => `速度：${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_ZH_HANT: Textos = {
@@ -1951,6 +2011,8 @@ const TEXTOS_ZH_HANT: Textos = {
   botonDescargaMp3Desc: '可在主畫面顯示或隱藏將目前曲目下載為 MP3 的按鈕。',
   sliderVolumen: '音量滑桿',
   sliderVolumenDesc: '可在彈出視窗主畫面顯示或隱藏音量滑桿。',
+  controlVelocidad: '速度控制',
+  controlVelocidadDesc: '可在彈出視窗中顯示或隱藏播放速度控制。',
   mostrar: '顯示',
   ocultar: '隱藏',
   temaNaranja: '橘色（預設）',
@@ -1964,6 +2026,8 @@ const TEXTOS_ZH_HANT: Textos = {
   descargando: '下載中…',
   descargaOk: '下載已開始！',
   descargaError: '下載失敗',
+  velocidad: '速度',
+  velocidadActual: (vel: number) => `速度：${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_JA: Textos = {
@@ -2056,6 +2120,8 @@ const TEXTOS_JA: Textos = {
   botonDescargaMp3Desc: 'メイン画面で現在の曲を MP3 でダウンロードするボタンを表示または非表示にできます。',
   sliderVolumen: '音量スライダー',
   sliderVolumenDesc: 'ポップアップのメイン画面で音量スライダーを表示または非表示にできます。',
+  controlVelocidad: '速度コントロール',
+  controlVelocidadDesc: 'ポップアップで再生速度コントロールを表示または非表示にできます。',
   mostrar: '表示',
   ocultar: '非表示',
   temaNaranja: 'オレンジ（既定）',
@@ -2069,6 +2135,8 @@ const TEXTOS_JA: Textos = {
   descargando: 'ダウンロード中…',
   descargaOk: 'ダウンロードを開始しました！',
   descargaError: 'ダウンロードに失敗しました',
+  velocidad: '速度',
+  velocidadActual: (vel: number) => `速度: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_KO: Textos = {
@@ -2161,6 +2229,8 @@ const TEXTOS_KO: Textos = {
   botonDescargaMp3Desc: '메인 화면에서 현재 트랙을 MP3로 다운로드하는 버튼을 표시하거나 숨길 수 있습니다.',
   sliderVolumen: '볼륨 슬라이더',
   sliderVolumenDesc: '팝업 메인 화면에서 볼륨 슬라이더를 표시하거나 숨길 수 있습니다.',
+  controlVelocidad: '속도 제어',
+  controlVelocidadDesc: '팝업에서 재생 속도 제어를 표시하거나 숨길 수 있습니다.',
   mostrar: '표시',
   ocultar: '숨기기',
   temaNaranja: '오렌지 (기본값)',
@@ -2174,6 +2244,8 @@ const TEXTOS_KO: Textos = {
   descargando: '다운로드 중…',
   descargaOk: '다운로드가 시작되었습니다!',
   descargaError: '다운로드 실패',
+  velocidad: '속도',
+  velocidadActual: (vel: number) => `속도: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_ID: Textos = {
@@ -2266,6 +2338,8 @@ const TEXTOS_ID: Textos = {
   botonDescargaMp3Desc: 'Memungkinkan Anda menampilkan atau menyembunyikan tombol untuk mengunduh lagu saat ini sebagai MP3 di layar utama.',
   sliderVolumen: 'Slider volume',
   sliderVolumenDesc: 'Memungkinkan Anda menampilkan atau menyembunyikan slider volume di layar utama popup.',
+  controlVelocidad: 'Kontrol kecepatan',
+  controlVelocidadDesc: 'Memungkinkan Anda menampilkan atau menyembunyikan kontrol kecepatan pemutaran di popup.',
   mostrar: 'Tampilkan',
   ocultar: 'Sembunyikan',
   temaNaranja: 'Oranye (default)',
@@ -2279,6 +2353,8 @@ const TEXTOS_ID: Textos = {
   descargando: 'Mengunduh…',
   descargaOk: 'Unduhan dimulai!',
   descargaError: 'Unduhan gagal',
+  velocidad: 'Kecepatan',
+  velocidadActual: (vel: number) => `Kecepatan: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_TH: Textos = {
@@ -2371,6 +2447,8 @@ const TEXTOS_TH: Textos = {
   botonDescargaMp3Desc: 'ให้คุณแสดงหรือซ่อนปุ่มสำหรับดาวน์โหลดเพลงปัจจุบันเป็น MP3 บนหน้าหลักได้',
   sliderVolumen: 'ตัวเลื่อนระดับเสียง',
   sliderVolumenDesc: 'ให้คุณแสดงหรือซ่อนตัวเลื่อนระดับเสียงบนหน้าหลักของป๊อปอัปได้',
+  controlVelocidad: 'การควบคุมความเร็ว',
+  controlVelocidadDesc: 'ให้คุณแสดงหรือซ่อนการควบคุมความเร็วการเล่นในป๊อปอัปได้',
   mostrar: 'แสดง',
   ocultar: 'ซ่อน',
   temaNaranja: 'สีส้ม (ค่าเริ่มต้น)',
@@ -2384,6 +2462,8 @@ const TEXTOS_TH: Textos = {
   descargando: 'กำลังดาวน์โหลด…',
   descargaOk: 'เริ่มดาวน์โหลดแล้ว!',
   descargaError: 'ดาวน์โหลดไม่สำเร็จ',
+  velocidad: 'ความเร็ว',
+  velocidadActual: (vel: number) => `ความเร็ว: ${vel.toFixed(2)}x`,
 };
 
 const TEXTOS_VI: Textos = {
@@ -2476,6 +2556,8 @@ const TEXTOS_VI: Textos = {
   botonDescargaMp3Desc: 'Cho phép hiển thị hoặc ẩn nút tải bài hiện tại dưới dạng MP3 ở màn hình chính.',
   sliderVolumen: 'Thanh âm lượng',
   sliderVolumenDesc: 'Cho phép hiển thị hoặc ẩn thanh âm lượng ở màn hình chính của popup.',
+  controlVelocidad: 'Điều khiển tốc độ',
+  controlVelocidadDesc: 'Cho phép hiển thị hoặc ẩn điều khiển tốc độ phát trong popup.',
   mostrar: 'Hiện',
   ocultar: 'Ẩn',
   temaNaranja: 'Cam (mặc định)',
@@ -2489,6 +2571,8 @@ const TEXTOS_VI: Textos = {
   descargando: 'Đang tải…',
   descargaOk: 'Đã bắt đầu tải xuống!',
   descargaError: 'Tải xuống thất bại',
+  velocidad: 'Tốc độ',
+  velocidadActual: (vel: number) => `Tốc độ: ${vel.toFixed(2)}x`,
 };
 
 export const TEXTOS = {

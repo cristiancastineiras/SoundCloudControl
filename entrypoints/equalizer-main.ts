@@ -1,4 +1,5 @@
-import { instalarEqualizadorMainWorld } from '../lib/equalizerMainWorld';
+import { instalarEqualizadorMainWorld } from '@/services/puenteEqualizador';
+import { instalarVelocidadMainWorld } from '@/services/velocidadMainWorld';
 
 export default defineContentScript({
   matches: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
@@ -6,5 +7,6 @@ export default defineContentScript({
   world: 'MAIN',
   main() {
     instalarEqualizadorMainWorld();
+    instalarVelocidadMainWorld();
   },
 });

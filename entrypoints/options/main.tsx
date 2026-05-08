@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import '../popup/style.css';
-import { aplicarModoAparienciaDocumento } from '../popup/documento';
-import { cargarPreferenciasPersistidas } from '../popup/storage';
+import { aplicarModoAparienciaDocumento } from '@/app/documento';
+import { cargarPreferenciasPersistidas } from '@/services/almacenamiento';
 
 async function bootstrap() {
   const preferenciasIniciales = await cargarPreferenciasPersistidas();

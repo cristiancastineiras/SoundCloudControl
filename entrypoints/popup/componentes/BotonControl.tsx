@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { unirClases } from '../utilidades';
+import { unirClases } from '@/shared';
 
 export function BotonControl(props: {
   etiqueta: string;

@@ -1,7 +1,7 @@
 import { GearSix, SlidersHorizontal } from '@phosphor-icons/react';
 import type { ReactNode, Ref } from 'react';
-import type { RespuestaPopup } from '../../../lib/contratos';
-import type { Textos } from '../i18n';
+import type { RespuestaPopup } from '@/services/mensajeria';
+import type { Textos } from '@/features/i18n';
 
 export function CabeceraPopup(props: {
   respuesta: RespuestaPopup;

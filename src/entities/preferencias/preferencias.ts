@@ -14,6 +14,7 @@ export const INTERVALO_POR_DEFECTO: IntervaloActualizacion = 4000;
 export const MODO_APARIENCIA_POR_DEFECTO: ModoApariencia = 'dark';
 export const MOSTRAR_DESCARGA_MP3_POR_DEFECTO = true;
 export const MOSTRAR_SLIDER_VOLUMEN_POR_DEFECTO = true;
+export const MOSTRAR_CONTROL_VELOCIDAD_POR_DEFECTO = true;
 export const MODO_COMPACTO_POR_DEFECTO = false;
 export const VERSION_NOTIF_VISTA_POR_DEFECTO = '';
 

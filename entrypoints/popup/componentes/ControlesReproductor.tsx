@@ -3,8 +3,8 @@ import {
   MODOS_REPETICION,
   type AccionReproductor,
   type EstadoCancion,
-} from '../../../lib/contratos';
-import type { Textos } from '../i18n';
+} from '@/entities/reproductor';
+import type { Textos } from '@/features/i18n';
 import { BotonControl } from './BotonControl';
 import { IconoControl } from './IconoControl';
 

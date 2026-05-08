@@ -1,14 +1,12 @@
 import { useMemo, useState, useEffect, type CSSProperties } from 'react';
-import { type Idioma, TEXTOS } from '../popup/i18n';
+import { type Idioma, TEXTOS } from '@/features/i18n';
 import {
   hexARgb,
   normalizarColorTema,
   rgbATripleta,
-} from '../popup/tema';
-import {
   type IntervaloActualizacion,
   type ModoApariencia,
-} from '../popup/preferencias';
+} from '@/entities/preferencias';
 import {
   guardarColorTema,
   guardarIdioma,
@@ -17,9 +15,10 @@ import {
   guardarModoCompacto,
   guardarMostrarDescargaMp3,
   guardarMostrarSliderVolumen,
+  guardarMostrarControlVelocidad,
   type PreferenciasPersistidas,
-} from '../popup/storage';
-import { aplicarModoAparienciaDocumento } from '../popup/documento';
+} from '@/services/almacenamiento';
+import { aplicarModoAparienciaDocumento } from '@/app/documento';
 import { PantallaAjustes } from '../popup/componentes/PantallaAjustes';
 
 export default function OpcionesApp(props: { preferenciasIniciales: PreferenciasPersistidas }) {
@@ -30,6 +29,7 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
   const [modoApariencia, setModoApariencia] = useState<ModoApariencia>(preferenciasIniciales.modoApariencia);
   const [mostrarDescargaMp3, setMostrarDescargaMp3] = useState(preferenciasIniciales.mostrarDescargaMp3);
   const [mostrarSliderVolumen, setMostrarSliderVolumen] = useState(preferenciasIniciales.mostrarSliderVolumen);
+  const [mostrarControlVelocidad, setMostrarControlVelocidad] = useState(preferenciasIniciales.mostrarControlVelocidad);
   const [intervaloActualizacion, setIntervaloActualizacion] =
     useState<IntervaloActualizacion>(preferenciasIniciales.intervaloActualizacion);
   const [modoCompacto, setModoCompacto] = useState(preferenciasIniciales.modoCompacto);
@@ -81,6 +81,11 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
     setMostrarSliderVolumen(mostrar);
   }
 
+  function cambiarMostrarControlVelocidad(mostrar: boolean) {
+    void guardarMostrarControlVelocidad(mostrar);
+    setMostrarControlVelocidad(mostrar);
+  }
+
   function cambiarModoCompacto(compacto: boolean) {
     void guardarModoCompacto(compacto);
     setModoCompacto(compacto);
@@ -98,6 +103,7 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
           modoApariencia={modoApariencia}
           mostrarDescargaMp3={mostrarDescargaMp3}
           mostrarSliderVolumen={mostrarSliderVolumen}
+          mostrarControlVelocidad={mostrarControlVelocidad}
           modoCompacto={modoCompacto}
           intervalo={intervaloActualizacion}
           onVolver={() => window.close()}
@@ -106,6 +112,7 @@ export default function OpcionesApp(props: { preferenciasIniciales: Preferencias
           onCambiarModoApariencia={cambiarModoApariencia}
           onCambiarMostrarDescargaMp3={cambiarMostrarDescargaMp3}
           onCambiarMostrarSliderVolumen={cambiarMostrarSliderVolumen}
+          onCambiarMostrarControlVelocidad={cambiarMostrarControlVelocidad}
           onCambiarModoCompacto={cambiarModoCompacto}
           onCambiarIntervalo={cambiarIntervalo}
         />
