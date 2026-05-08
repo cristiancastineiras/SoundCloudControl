@@ -3,6 +3,11 @@
 Todos los cambios importantes del proyecto se documentan aquí.
 Plantilla: https://keepachangelog.com/en/1.0.0/
 
+## [1.5.1] - 2026-05-08
+
+### Fixed
+- Icono de acción del popup: se reemplaza `icon.svg` (no existente) por el mapa de PNGs por tamaño para evitar el error de decodificación de imagen en Chrome.
+
 ## [1.5.0] - 2026-05-08
 
 ### Added
