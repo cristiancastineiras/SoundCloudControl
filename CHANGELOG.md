@@ -3,6 +3,13 @@
 Todos los cambios importantes del proyecto se documentan aquí.
 Plantilla: https://keepachangelog.com/en/1.0.0/
 
+## [1.6.1] - 2026-05-11
+
+### Fixed
+- Workflow de release: ahora resuelve los artefactos reales generados por WXT para Chrome y Firefox, evitando fallos por rutas o nombres de archivo incorrectos.
+- Publicación en Firefox: el envío a AMO termina tras crear la submission y ya no espera a la aprobación manual para finalizar el job.
+- Condicionales del workflow: la publicación en tiendas se activa mediante variables de entorno compatibles con GitHub Actions cuando existen los secretos necesarios.
+
 ## [1.6.0] - 2026-05-08
 
 ### Added
