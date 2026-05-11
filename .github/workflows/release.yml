@@ -17,6 +17,9 @@ jobs:
   release:
     name: Build and release from tag
     runs-on: ubuntu-latest
+    env:
+      HAS_FIREFOX_PUBLISHING: ${{ secrets.FIREFOX_ISSUER != '' && secrets.FIREFOX_SECRET != '' }}
+      HAS_CHROME_PUBLISHING: ${{ secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' && secrets.CHROME_EXTENSION_ID != '' }}
 
     steps:
       - name: Checkout repository
@@ -102,7 +105,7 @@ jobs:
 
       - name: Sign and Publish to Firefox Add-on Store
         id: firefox_publish
-        if: ${{ secrets.FIREFOX_ISSUER != '' && secrets.FIREFOX_SECRET != '' }}
+        if: ${{ env.HAS_FIREFOX_PUBLISHING == 'true' }}
         continue-on-error: true
         env:
           FIREFOX_ISSUER: ${{ secrets.FIREFOX_ISSUER }}
@@ -129,7 +132,7 @@ jobs:
           mv "$FIREFOX_XPI" ./.output/soundcloud-control-firefox.xpi
 
       - name: Publish to Chrome Web Store
-        if: ${{ secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' && secrets.CHROME_EXTENSION_ID != '' }}
+        if: ${{ env.HAS_CHROME_PUBLISHING == 'true' }}
         continue-on-error: true
         uses: wdzeng/chrome-extension@v1
         with:
