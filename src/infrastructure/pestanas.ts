@@ -47,14 +47,26 @@ export async function listarPestanasSoundCloud() {
 
 function seleccionarPestanaObjetivo(tabs: PestanaSoundCloud[]) {
   return [...tabs].sort((izq, der) => {
-    return calcularPrioridadPestana(der) - calcularPrioridadPestana(izq);
+    const prioridadIzq = calcularPrioridadPestana(izq);
+    const prioridadDer = calcularPrioridadPestana(der);
+
+    for (let indice = 0; indice < prioridadIzq.length; indice += 1) {
+      if (prioridadIzq[indice] === prioridadDer[indice]) {
+        continue;
+      }
+
+      return prioridadDer[indice] - prioridadIzq[indice];
+    }
+
+    return 0;
   })[0] ?? null;
 }
 
 function calcularPrioridadPestana(tab: PestanaSoundCloud) {
   return [
-    tab.audible ? 4 : 0,
-    tab.active ? 2 : 0,
+    tab.audible ? 1 : 0,
+    tab.status === 'complete' ? 1 : 0,
+    tab.active ? 1 : 0,
     tab.lastAccessed ?? 0,
-  ].reduce((total, valor) => total + valor, 0);
+  ];
 }

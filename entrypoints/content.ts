@@ -10,12 +10,10 @@ import {
   type SolicitudContenido,
 } from '@/services/mensajeria';
 import { crearGestorEqualizadorContenido } from '@/services/puenteEqualizador';
-import { publicarVelocidadObjetivo } from '@/services/velocidadCliente';
+import { publicarVelocidadObjetivo, publicarVolumenObjetivo } from '@/services/velocidadCliente';
 
 let ultimoVolumenAudible = 0.6;
 let ultimaVelocidadObjetivo = 1;
-
-const TOLERANCIA_SINCRONIZACION_VOLUMEN = 6;
 
 const gestorEqualizador = crearGestorEqualizadorContenido();
 
@@ -267,40 +265,38 @@ function obtenerEstadoSeguimiento(botonSeguimiento: HTMLElement | null) {
 
 async function ajustarVolumen(volumen: number) {
   const volumenNormalizado = normalizarVolumen(volumen);
+  const fraccion = volumenNormalizado / 100;
   const audioPrincipal = obtenerAudioPrincipal();
-  let controlSincronizado = false;
 
-  try {
-    controlSincronizado = await ajustarVolumenDesdeControl(volumenNormalizado);
-  } catch {
-    controlSincronizado = false;
-  }
+  // 1. Publicar al MAIN world para que bloquee los resets internos de SC.
+  //    SC almacena el volumen en su variable interna `J` (módulo webpack). Cuando
+  //    _updateVolume() se dispara (nueva pista, seek, stall) aplica audio.volume = J
+  //    desde la MAIN world. El override en velocidadMainWorld.ts intercepta eso y
+  //    mantiene nuestro objetivo durante 6 s — suficiente para transiciones de pista.
+  publicarVolumenObjetivo(fraccion);
 
+  // 2. Aplicar directamente sobre el elemento <audio>. Esto es lo que realmente
+  //    controla el sonido y funciona incluso con la pestaña en segundo plano.
   if (audioPrincipal) {
-    const estadoTrasControl = controlSincronizado
-      ? obtenerEstadoVolumen(audioPrincipal)
-      : null;
-    const requiereFallbackAudio =
-      !estadoTrasControl ||
-      Math.abs(estadoTrasControl.volumen - volumenNormalizado) >
-        TOLERANCIA_SINCRONIZACION_VOLUMEN ||
-      (volumenNormalizado > 0 && estadoTrasControl.silenciado);
-
-    if (requiereFallbackAudio) {
-      aplicarVolumenDirecto(audioPrincipal, volumenNormalizado);
+    audioPrincipal.volume = fraccion;
+    audioPrincipal.muted = volumenNormalizado === 0;
+    if (volumenNormalizado > 0) {
+      ultimoVolumenAudible = fraccion;
     }
   }
 
-  await esperar(controlSincronizado ? 90 : 60);
+  // 3. Sincronizar la UI nativa de SoundCloud (best-effort).
+  //    Si no funciona, no importa: el audio ya suena al nivel correcto y el
+  //    MAIN world evitará que SC lo resetee.
+  await sincronizarUiVolumen(volumenNormalizado);
+
+  await esperar(50);
   return obtenerEstadoActual();
 }
 
 async function ajustarVelocidad(velocidad: number) {
   const velocidadNormalizada = normalizarVelocidad(velocidad);
   const audioPrincipal = obtenerAudioPrincipal();
-  const botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
-
-  await forzarCicloMuteUnmuteVelocidad(audioPrincipal, botonVolumen);
 
   ultimaVelocidadObjetivo = publicarVelocidadObjetivo(velocidadNormalizada);
 
@@ -319,41 +315,6 @@ async function ajustarVelocidad(velocidad: number) {
   ultimaVelocidadObjetivo = publicarVelocidadObjetivo(velocidadNormalizada);
   await esperar(40);
   return obtenerEstadoActual();
-}
-
-async function forzarCicloMuteUnmuteVelocidad(
-  audioPrincipal: HTMLAudioElement | null,
-  botonVolumen: HTMLButtonElement | null,
-) {
-  if (botonVolumen) {
-    botonVolumen.click();
-    await esperar(18);
-    botonVolumen.click();
-    await esperar(18);
-    return;
-  }
-
-  if (!audioPrincipal) {
-    return;
-  }
-
-  const estabaSilenciado = audioPrincipal.muted;
-  const volumenOriginal = audioPrincipal.volume;
-
-  if (estabaSilenciado || volumenOriginal === 0) {
-    // Si ya estaba silenciado, disparamos el ciclo sin riesgo de audio
-    // audible dejando el volumen en 0 durante la breve reactivación.
-    audioPrincipal.volume = 0;
-    audioPrincipal.muted = false;
-    await esperar(18);
-    audioPrincipal.muted = true;
-    audioPrincipal.volume = volumenOriginal;
-    return;
-  }
-
-  audioPrincipal.muted = true;
-  await esperar(18);
-  audioPrincipal.muted = false;
 }
 
 async function alternarSilencio() {
@@ -468,21 +429,6 @@ function obtenerEstadoVolumen(audioPrincipal: HTMLAudioElement | null) {
   const estadoDesdeControl = obtenerEstadoVolumenDesdeControl(audioPrincipal);
   const estadoDesdeAudio = obtenerEstadoVolumenDesdeAudio(audioPrincipal);
 
-  if (estadoDesdeControl && estadoDesdeAudio) {
-    const estadoPreferido = hayDesincronizacionVolumen(
-      estadoDesdeControl,
-      estadoDesdeAudio,
-    )
-      ? estadoDesdeAudio
-      : estadoDesdeControl;
-
-    if (!estadoPreferido.silenciado && estadoPreferido.volumen > 0) {
-      ultimoVolumenAudible = estadoPreferido.volumen / 100;
-    }
-
-    return estadoPreferido;
-  }
-
   if (estadoDesdeControl) {
     if (!estadoDesdeControl.silenciado && estadoDesdeControl.volumen > 0) {
       ultimoVolumenAudible = estadoDesdeControl.volumen / 100;
@@ -556,69 +502,75 @@ function obtenerEstadoVolumenDesdeAudio(audioPrincipal: HTMLAudioElement | null)
   };
 }
 
-function hayDesincronizacionVolumen(
-  estadoControl: { volumen: number; silenciado: boolean },
-  estadoAudio: { volumen: number; silenciado: boolean },
+/**
+ * Muta directamente el DOM del control de volumen de SoundCloud.
+ * Funciona en pestañas en segundo plano porque no depende del foco ni de
+ * eventos de teclado/ratón que el navegador bloquea para tabs inactivos.
+ *
+ * Estructura del DOM de SC:
+ *   <div class="volume [muted|expanded]" data-level="0-10">
+ *     <div class="volume__sliderWrapper" aria-valuenow="0-1">
+ *       <div class="volume__sliderProgress" style="height: Xpx">
+ *       <div class="volume__sliderHandle"   style="top: Xpx">
+ */
+function mutarDomVolumen(
+  contenedorVolumen: HTMLElement | null,
+  sliderVolumen: HTMLElement | null,
+  volumen: number,
 ) {
-  return (
-    Math.abs(estadoControl.volumen - estadoAudio.volumen) >
-      TOLERANCIA_SINCRONIZACION_VOLUMEN ||
-    (estadoControl.silenciado !== estadoAudio.silenciado &&
-      (estadoControl.volumen > 0 || estadoAudio.volumen > 0))
-  );
-}
+  const fraccion = volumen / 100;
 
-function aplicarVolumenDirecto(
-  audioPrincipal: HTMLAudioElement,
-  volumenNormalizado: number,
-) {
-  // Fallback fiable: si SoundCloud no refleja su slider a tiempo, al menos
-  // dejamos el audio real en el valor pedido y evitamos romper el popup.
-  audioPrincipal.volume = volumenNormalizado / 100;
-  audioPrincipal.muted = volumenNormalizado === 0;
-
-  if (volumenNormalizado > 0) {
-    ultimoVolumenAudible = volumenNormalizado / 100;
-  }
-}
-
-async function ajustarVolumenDesdeControl(volumen: number) {
-  const audioPrincipal = obtenerAudioPrincipal();
-  let sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
-  let botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
-  let contenedorVolumen = buscarElemento<HTMLElement>(SELECTORES.volumenContenedor);
-  const estadoAntes = obtenerEstadoVolumen(audioPrincipal);
-  let restaurarSonido = false;
-
-  if (!sliderVolumen && !botonVolumen) {
-    return false;
+  if (contenedorVolumen) {
+    // data-level: SoundCloud usa 0-10 para el icono del altavoz
+    contenedorVolumen.setAttribute('data-level', String(Math.round(volumen / 10)));
+    // Clases: "muted" cuando silenciado, "expanded" cuando hay volumen
+    // ("expanded" es también el estado hover, SC lo retira solo al salir el ratón)
+    contenedorVolumen.classList.remove('muted', 'expanded');
+    contenedorVolumen.classList.add(volumen === 0 ? 'muted' : 'expanded');
   }
 
-  if (!esControlVolumenVisible(sliderVolumen) && volumen > 0 && botonVolumen) {
-    // Forzamos primero un mute para que SoundCloud reactive su propio control
-    // de volumen antes de mover el slider oculto.
-    if (!estadoAntes.silenciado) {
-      botonVolumen.click();
-      await esperar(80);
+  if (sliderVolumen) {
+    // aria-valuenow en escala 0-1 (aria-valuemin="0" aria-valuemax="1" en SC)
+    sliderVolumen.setAttribute('aria-valuenow', String(fraccion));
+
+    // offsetHeight funciona en tabs en segundo plano (a diferencia de
+    // getBoundingClientRect que devuelve 0 para elementos no visibles)
+    const altoTotal = sliderVolumen.offsetHeight || 130;
+    const progress = sliderVolumen.querySelector<HTMLElement>('.volume__sliderProgress');
+    const handle = sliderVolumen.querySelector<HTMLElement>('.volume__sliderHandle');
+
+    if (progress) {
+      progress.style.height = `${Math.round(fraccion * altoTotal)}px`;
     }
+    if (handle) {
+      handle.style.top = `${Math.round((1 - fraccion) * altoTotal)}px`;
+    }
+  }
+}
 
-    restaurarSonido = true;
-    sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
-    botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
-    contenedorVolumen = buscarElemento<HTMLElement>(SELECTORES.volumenContenedor);
+/**
+ * Sincroniza la UI nativa de SoundCloud con el volumen objetivo.
+ * Ruta principal: mutación directa del DOM — siempre funciona, incluso con
+ * la pestaña en segundo plano (sin foco).
+ * Ruta secundaria: si el slider es visible (hover activo), también envía
+ * eventos de ratón para que React de SC actualice su estado interno.
+ */
+async function sincronizarUiVolumen(volumen: number) {
+  const sliderVolumen = buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
+  const contenedorVolumen = buscarElemento<HTMLElement>(SELECTORES.volumenContenedor);
+  const botonVolumen = buscarElemento<HTMLButtonElement>(SELECTORES.botonVolumen);
+
+  if (!sliderVolumen && !botonVolumen && !contenedorVolumen) {
+    return;
   }
 
-  despertarControlVolumen(contenedorVolumen, sliderVolumen, botonVolumen);
+  // Ruta principal: mutación directa — funciona en background y en primer plano.
+  mutarDomVolumen(contenedorVolumen, sliderVolumen, volumen);
 
-  if (!sliderVolumen) {
-    return volumen <= 0 && Boolean(botonVolumen);
-  }
-
-  const rectangulo = sliderVolumen.getBoundingClientRect();
-
-  // Slider visible en pantalla (usuario haciendo hover en SC) → eventos de
-  // ratón para precisión exacta.
-  if (rectangulo.height >= 12 && rectangulo.width >= 4) {
+  // Ruta secundaria: si el slider es visible (hover activo, tab en primer plano),
+  // enviar también eventos de ratón para que React de SC detecte el cambio.
+  if (sliderVolumen && esControlVolumenVisible(sliderVolumen)) {
+    const rectangulo = sliderVolumen.getBoundingClientRect();
     const proporcion = volumen / 100;
     const margen = Math.min(6, rectangulo.height / 10);
     const altoUtil = Math.max(1, rectangulo.height - margen * 2);
@@ -631,118 +583,7 @@ async function ajustarVolumenDesdeControl(volumen: number) {
 
     sliderVolumen.focus({ preventScroll: true });
     despacharSecuenciaDeslizante(sliderVolumen, clientX, clientY);
-
-    if (restaurarSonido && botonVolumen) {
-      await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
-    }
-
-    return true;
   }
-
-  // Slider oculto (SoundCloud muestra el control solo al hacer hover con el
-  // ratón físico). Usamos el atajo global Shift+ArrowUp/Down que SoundCloud
-  // procesa a nivel de documento y SÍ actualiza el aria-valuenow del slider.
-  // Cada pulsación equivale a un paso del 10 % del rango 0-100.
-  //
-  // Inspiración: IDEAS/competencia/src/contents/utils.js → volumeUp/Down()
-  const estadoActual = obtenerEstadoVolumen(audioPrincipal);
-  const volumenActual = estadoActual.volumen;
-  const diferencia = volumen - volumenActual;
-
-  if (diferencia === 0) {
-    if (restaurarSonido && botonVolumen) {
-      await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
-    }
-
-    return true;
-  }
-
-  // Extremos: Home/End sobre el elemento del slider son más fiables.
-  if (volumen <= 0) {
-    sliderVolumen.focus({ preventScroll: true });
-    despacharTecla(sliderVolumen, 'Home');
-    return true;
-  }
-
-  if (volumen >= 100) {
-    sliderVolumen.focus({ preventScroll: true });
-    despacharTecla(sliderVolumen, 'End');
-    return true;
-  }
-
-  // Atajo global Shift+Arrow para valores intermedios.
-  const tecla = diferencia > 0 ? 'ArrowUp' : 'ArrowDown';
-  const pasos = Math.max(1, Math.round(Math.abs(diferencia) / 10));
-
-  document.body.focus();
-
-  for (let i = 0; i < pasos; i++) {
-    const opts: KeyboardEventInit = {
-      key: tecla,
-      code: tecla,
-      shiftKey: true,
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-    };
-    document.dispatchEvent(new KeyboardEvent('keydown', opts));
-    document.dispatchEvent(new KeyboardEvent('keyup', opts));
-  }
-
-  if (restaurarSonido && botonVolumen) {
-    await restaurarSonidoTrasAjuste(botonVolumen, volumen, audioPrincipal);
-  }
-
-  return true;
-}
-
-async function restaurarSonidoTrasAjuste(
-  botonVolumen: HTMLButtonElement,
-  volumenObjetivo: number,
-  audioPrincipal: HTMLAudioElement | null,
-) {
-  if (volumenObjetivo <= 0) {
-    return;
-  }
-
-  await esperar(40);
-
-  if (obtenerEstadoVolumen(audioPrincipal).silenciado) {
-    botonVolumen.click();
-    await esperar(60);
-  }
-}
-
-function despertarControlVolumen(
-  ...objetivos: Array<HTMLElement | null | undefined>
-) {
-  for (const objetivo of objetivos) {
-    if (!objetivo) {
-      continue;
-    }
-
-    const rectangulo = objetivo.getBoundingClientRect();
-    const clientX = rectangulo.left + rectangulo.width / 2;
-    const clientY = rectangulo.top + rectangulo.height / 2;
-    const eventoBase: MouseEventInit = {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      view: window,
-      clientX,
-      clientY,
-    };
-
-    objetivo.dispatchEvent(new MouseEvent('mouseenter', eventoBase));
-    objetivo.dispatchEvent(new MouseEvent('mouseover', eventoBase));
-    objetivo.dispatchEvent(new MouseEvent('mousemove', eventoBase));
-  }
-}
-
-async function asegurarControlVolumenVisible() {
-  // DEPRECATED — mantenida por si hay un referencia pendiente pero ya no se
-  // invoca desde ajustarVolumenDesdeControl.
-  return buscarElemento<HTMLElement>(SELECTORES.sliderVolumen);
 }
 
 function esControlVolumenVisible(sliderVolumen: HTMLElement | null) {
@@ -755,11 +596,6 @@ function esControlVolumenVisible(sliderVolumen: HTMLElement | null) {
     rect.width > 0 &&
     rect.height > 0
   );
-}
-
-function ajustarVolumenConTeclado(_sliderVolumen: HTMLElement, _volumenObjetivo: number) {
-  // DEPRECATED — reemplazado por lógica inline en ajustarVolumenDesdeControl.
-  return false;
 }
 
 function despacharSecuenciaDeslizante(
@@ -820,20 +656,6 @@ function despacharSecuenciaDeslizante(
       buttons: 0,
     }),
   );
-}
-
-function despacharTecla(elemento: HTMLElement, tecla: string, conMayusculas = false) {
-  const evento: KeyboardEventInit = {
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-    key: tecla,
-    code: tecla,
-    shiftKey: conMayusculas,
-  };
-
-  elemento.dispatchEvent(new KeyboardEvent('keydown', evento));
-  elemento.dispatchEvent(new KeyboardEvent('keyup', evento));
 }
 
 function limitarNumero(valor: number, minimo: number, maximo: number) {
