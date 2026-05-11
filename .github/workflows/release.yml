@@ -113,20 +113,21 @@ jobs:
         run: |
           pnpm exec web-ext sign \
             --channel listed \
+            --approval-timeout 0 \
             -s "${{ steps.artifacts.outputs.firefox_dir }}" \
             --upload-source-code "${{ steps.artifacts.outputs.source_zip }}" \
             --artifacts-dir ./.output \
             --api-key "$FIREFOX_ISSUER" \
             --api-secret "$FIREFOX_SECRET"
 
-      - name: Rename Firefox artifact
+      - name: Rename Firefox artifact if available
         if: ${{ steps.firefox_publish.outcome == 'success' }}
         shell: bash
         run: |
           FIREFOX_XPI=$(find ./.output -maxdepth 1 -name '*.xpi' | head -1)
           if [[ -z "$FIREFOX_XPI" ]]; then
-            echo "Firefox signing succeeded but no XPI was generated" >&2
-            exit 1
+            echo "Firefox submission created and is pending review; no signed XPI is available yet."
+            exit 0
           fi
 
           mv "$FIREFOX_XPI" ./.output/soundcloud-control-firefox.xpi
