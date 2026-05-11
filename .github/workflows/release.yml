@@ -62,34 +62,81 @@ jobs:
         shell: bash
         run: ls -lah .output/*.zip
 
-      - name: Zip Source Code
-        run: zip -r ./Source.zip . -x "node_modules/*" ".git/*" ".github/*" "dist/*" ".output/*" "*.zip"
+      - name: Resolve artifact paths
+        id: artifacts
+        shell: bash
+        run: |
+          shopt -s nullglob
+          chrome=(.output/*-chrome.zip)
+          firefox=(.output/*-firefox.zip)
+          sources=(.output/*-sources.zip)
+
+          [[ ${#chrome[@]} -eq 1 ]] || {
+            echo "Expected exactly one Chrome zip in .output" >&2
+            ls -lah .output
+            exit 1
+          }
+
+          [[ ${#firefox[@]} -eq 1 ]] || {
+            echo "Expected exactly one Firefox zip in .output" >&2
+            ls -lah .output
+            exit 1
+          }
+
+          [[ ${#sources[@]} -eq 1 ]] || {
+            echo "Expected exactly one sources zip in .output" >&2
+            ls -lah .output
+            exit 1
+          }
+
+          [[ -f .output/firefox-mv2/manifest.json ]] || {
+            echo "Missing Firefox build output at .output/firefox-mv2/manifest.json" >&2
+            find .output -maxdepth 2 -type f | sort
+            exit 1
+          }
+
+          echo "chrome_zip=${chrome[0]}" >> "$GITHUB_OUTPUT"
+          echo "firefox_zip=${firefox[0]}" >> "$GITHUB_OUTPUT"
+          echo "source_zip=${sources[0]}" >> "$GITHUB_OUTPUT"
+          echo "firefox_dir=.output/firefox-mv2" >> "$GITHUB_OUTPUT"
 
       - name: Sign and Publish to Firefox Add-on Store
+        id: firefox_publish
+        if: ${{ secrets.FIREFOX_ISSUER != '' && secrets.FIREFOX_SECRET != '' }}
         continue-on-error: true
         env:
           FIREFOX_ISSUER: ${{ secrets.FIREFOX_ISSUER }}
           FIREFOX_SECRET: ${{ secrets.FIREFOX_SECRET }}
         run: |
-          pnpm add -D web-ext
-          npx web-ext sign --channel listed -s ./dist/firefox/ --upload-source-code ./Source.zip --artifacts-dir ./.output --api-key $FIREFOX_ISSUER --api-secret $FIREFOX_SECRET
+          pnpm exec web-ext sign \
+            --channel listed \
+            -s "${{ steps.artifacts.outputs.firefox_dir }}" \
+            --upload-source-code "${{ steps.artifacts.outputs.source_zip }}" \
+            --artifacts-dir ./.output \
+            --api-key "$FIREFOX_ISSUER" \
+            --api-secret "$FIREFOX_SECRET"
 
       - name: Rename Firefox artifact
-        continue-on-error: true
+        if: ${{ steps.firefox_publish.outcome == 'success' }}
+        shell: bash
         run: |
-          FIREFOX_XPI=$(ls ./.output/*.xpi 2>/dev/null | head -1)
-          if [ -f "$FIREFOX_XPI" ]; then
-            mv "$FIREFOX_XPI" ./.output/soundcloud-control-firefox.xpi
+          FIREFOX_XPI=$(find ./.output -maxdepth 1 -name '*.xpi' | head -1)
+          if [[ -z "$FIREFOX_XPI" ]]; then
+            echo "Firefox signing succeeded but no XPI was generated" >&2
+            exit 1
           fi
 
+          mv "$FIREFOX_XPI" ./.output/soundcloud-control-firefox.xpi
+
       - name: Publish to Chrome Web Store
+        if: ${{ secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' && secrets.CHROME_EXTENSION_ID != '' }}
         continue-on-error: true
         uses: wdzeng/chrome-extension@v1
         with:
           client-id: ${{ secrets.CHROME_CLIENT_ID }}
           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          zip-path: ./.output/soundcloud-control.zip
+          zip-path: ${{ steps.artifacts.outputs.chrome_zip }}
           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
 
       - name: Create GitHub release
@@ -100,7 +147,8 @@ jobs:
           body_path: ${{ runner.temp }}/release-body.md
           files: |
             .output/*.zip
+            .output/*.xpi
           draft: false
           prerelease: ${{ steps.meta.outputs.prerelease }}
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           overwrite_files: true
