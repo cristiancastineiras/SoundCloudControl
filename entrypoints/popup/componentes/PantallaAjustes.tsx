@@ -11,6 +11,7 @@ import {
   type Ref,
 } from 'react';
 import pkg from '../../../package.json';
+import { CAPACIDADES } from '@/shared';
 import {
   OPCIONES_IDIOMA,
   type Idioma,
@@ -296,6 +297,7 @@ export function PantallaAjustes(props: {
           </div>
         </Seccion>
 
+        {CAPACIDADES.controlVelocidad ? (
         <Seccion
           titulo={t.controlVelocidad}
           tituloId={velocidadId}
@@ -330,6 +332,7 @@ export function PantallaAjustes(props: {
             </button>
           </div>
         </Seccion>
+        ) : null}
 
         <Seccion
           titulo={t.modoCompacto}

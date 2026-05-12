@@ -8,6 +8,7 @@ import {
   type CSSProperties,
 } from 'react';
 import { GearSix, SlidersHorizontal, X } from '@phosphor-icons/react';
+import { CAPACIDADES } from '@/shared';
 import {
   ACCIONES_REPRODUCTOR,
   MODOS_REPETICION,
@@ -451,12 +452,12 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
           ? t.descargaError
           : '';
 
-  const resumenEstadoEqualizador = [
+  const resumenEstadoEqualizador = CAPACIDADES.equalizador ? [
     t.equalizador,
     respuestaEqualizador.mensaje,
     equalizador.habilitado ? t.eqActivado : t.eqDesactivado,
     equalizador.audioDetectado ? t.eqAudioDetectado : t.eqAudioNoDetectado,
-  ].join('. ');
+  ].join('. ') : '';
 
   const resumenEstadoEnVivo =
     vista === 'equalizador'
@@ -803,7 +804,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
             onCambiarModoCompacto={cambiarModoCompacto}
             onCambiarIntervalo={cambiarIntervaloActualizacion}
           />
-        ) : vista === 'equalizador' ? (
+        ) : vista === 'equalizador' && CAPACIDADES.equalizador ? (
           <PantallaEqualizador
             panelId={ID_PANEL_EQUALIZADOR}
             ayudaId={ID_AYUDA_EQUALIZADOR}
@@ -849,16 +850,18 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                     {cancion?.titulo ?? respuesta.mensaje}
                   </button>
                   <div className="flex flex-none items-center">
-                    <button
-                      ref={botonEqualizadorRef}
-                      type="button"
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-marfil/35 transition-colors hover:text-marfil/75"
-                      aria-label={t.abrirEqualizador}
-                      aria-expanded={false}
-                      aria-controls={ID_PANEL_EQUALIZADOR}
-                      onClick={() => setVista('equalizador')}>
-                      <SlidersHorizontal size={11} weight="bold" />
-                    </button>
+                    {CAPACIDADES.equalizador ? (
+                      <button
+                        ref={botonEqualizadorRef}
+                        type="button"
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-marfil/35 transition-colors hover:text-marfil/75"
+                        aria-label={t.abrirEqualizador}
+                        aria-expanded={false}
+                        aria-controls={ID_PANEL_EQUALIZADOR}
+                        onClick={() => setVista('equalizador')}>
+                        <SlidersHorizontal size={11} weight="bold" />
+                      </button>
+                    ) : null}
                     <button
                       ref={botonAjustesRef}
                       type="button"
@@ -934,7 +937,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
               </div>
             ) : null}
 
-            {respuesta.estadoVista === 'disponible' && cancion && mostrarControlVelocidad ? (
+            {CAPACIDADES.controlVelocidad && respuesta.estadoVista === 'disponible' && cancion && mostrarControlVelocidad ? (
               <div className="border-t border-white/8 px-3.5 py-2.5">
                 <ControlVelocidad
                   compacto
@@ -1018,7 +1021,7 @@ function AplicacionPopup(props: { preferenciasIniciales: PreferenciasPersistidas
                   />
                 ) : null}
 
-                {mostrarControlVelocidad ? (
+                {CAPACIDADES.controlVelocidad && mostrarControlVelocidad ? (
                   <ControlVelocidad
                     velocidad={velocidadVisible}
                     bloqueado={controlesBloqueados}
