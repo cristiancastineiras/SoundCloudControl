@@ -1,16 +1,19 @@
 /**
- * Override de `HTMLMediaElement.prototype.playbackRate` que vive en la MAIN
- * world. SoundCloud rebobina la velocidad a 1.0 constantemente desde su propio
- * código (que también vive en la MAIN world); desde el content script aislado
- * sería imposible mantener la velocidad fijada. Por eso este módulo se inyecta
- * vía `equalizer-main.ts` (ya configurado como `world: 'MAIN'`).
+ * Override de `HTMLMediaElement.prototype.playbackRate` y `.volume` en la
+ * MAIN world.
  *
- * Inspiración: IDEAS/speedcontrol/soundcloud-script.js (mismo patrón).
+ * - Override de volumen: siempre activo (todos los navegadores).
+ *   SC resetea `audio.volume` desde su código interno (_updateVolume). El
+ *   setter overrideado intercepta esos resets y mantiene el objetivo durante
+ *   DURACION_BLOQUEO_VOLUMEN_MS ms tras el último comando.
  *
- * Comunicación con el content script: vía `window.postMessage` con el canal
- * dedicado `sc-control.velocidad`. El content script publica
- * `{ tipo: 'set-velocidad', velocidad: number }` y el override actualiza el
- * objetivo y lo aplica a todos los elementos `<audio>`/`<video>`.
+ * - Override de velocidad: solo si opciones.velocidad = true (Firefox).
+ *   SC rebobina `audio.playbackRate` a 1.0 constantemente desde su bundle
+ *   en la MAIN world. El override mantiene el objetivo y lo re-aplica ante
+ *   cualquier intento de reset.
+ *
+ * Comunicación con el content script: vía `window.postMessage` con los
+ * canales dedicados `sc-control.volumen` y `sc-control.velocidad`.
  */
 
 const CANAL_VELOCIDAD = 'sc-control.velocidad';
@@ -42,13 +45,83 @@ type AudioContextPatched = AudioContext & {
   __scControlVelocidadHooked?: boolean;
 };
 
-export function instalarVelocidadMainWorld(): void {
+export function instalarVelocidadMainWorld(
+  opciones: { velocidad?: boolean } = {},
+): void {
+  const instalarVelocidad = opciones.velocidad ?? true;
   const ventana = window as unknown as VentanaVelocidad & Record<string, unknown>;
 
   if (ventana[FLAG_INSTALADO]) {
     return;
   }
   ventana[FLAG_INSTALADO] = true;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Override de VOLUMEN — siempre activo (Chrome + Firefox)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  let volumenObjetivo = -1;      // -1 = sin control activo
+  let volumenBloqueadoHasta = 0; // timestamp ms hasta el que bloqueamos resets de SC
+
+  const DURACION_BLOQUEO_VOLUMEN_MS = 6000; // 6 s – cubre transiciones de pista y stalls
+
+  const descriptorVolumen = Object.getOwnPropertyDescriptor(
+    HTMLMediaElement.prototype,
+    'volume',
+  );
+
+  if (descriptorVolumen?.get && descriptorVolumen?.set) {
+    const nativeVolGet = descriptorVolumen.get;
+    const nativeVolSet = descriptorVolumen.set;
+
+    Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+      configurable: true,
+      enumerable: true,
+      get(this: HTMLMediaElement) {
+        return nativeVolGet.call(this);
+      },
+      set(this: HTMLMediaElement, valor: number) {
+        // Si tenemos un bloqueo activo y SC intenta resetear a otro valor, forzamos
+        // el objetivo. El bloqueo expira sólo tras DURACION_BLOQUEO_VOLUMEN_MS.
+        if (
+          volumenObjetivo >= 0 &&
+          Date.now() < volumenBloqueadoHasta &&
+          Math.abs(Number(valor) - volumenObjetivo) > 0.005
+        ) {
+          nativeVolSet.call(this, volumenObjetivo);
+          return;
+        }
+        nativeVolSet.call(this, valor);
+      },
+    });
+
+    // Aplica el volumen objetivo a todos los elementos de audio activos.
+    // Usa querySelectorAll directamente en lugar de un Set persistente para
+    // capturar también elementos creados después de instalar el override.
+    function aplicarVolumenATodos() {
+      if (volumenObjetivo < 0) return;
+      document.querySelectorAll<HTMLMediaElement>('audio,video').forEach((m) => {
+        try { nativeVolSet.call(m, volumenObjetivo); } catch { /* noop */ }
+      });
+    }
+
+    window.addEventListener('message', (evento: MessageEvent) => {
+      if (evento.source !== window) return;
+      const data = evento.data as Partial<SolicitudVolumen> | null;
+      if (!data || data.canal !== CANAL_VOLUMEN) return;
+      if (data.tipo === 'set-volumen' && typeof data.volumen === 'number') {
+        volumenObjetivo = Math.max(0, Math.min(1, data.volumen));
+        volumenBloqueadoHasta = Date.now() + DURACION_BLOQUEO_VOLUMEN_MS;
+        aplicarVolumenATodos();
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Override de VELOCIDAD — solo si instalarVelocidad = true (Firefox)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  if (!instalarVelocidad) return;
 
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLMediaElement.prototype,
@@ -66,16 +139,6 @@ export function instalarVelocidadMainWorld(): void {
   let observadorDom: MutationObserver | null = null;
   let velocidadObjetivo = 1;
   let parchesInstalados = false;
-
-  // ── Control de volumen (mismo patrón que playbackRate) ──────────────────────
-  // SC almacena el volumen global en su variable interna `J`. Cuando _updateVolume()
-  // se dispara (nueva pista, seek, stall) llama player.setVolume(J) → audio.volume = J,
-  // sobreescribiendo el valor que puso nuestra extensión. La solución: override del
-  // setter en MAIN world, igual que hacemos con playbackRate.
-  let volumenObjetivo = -1;        // -1 = sin control activo
-  let volumenBloqueadoHasta = 0;   // timestamp ms hasta el que bloqueamos los resets de SC
-
-  const DURACION_BLOQUEO_VOLUMEN_MS = 6000; // 6 s – suficiente para transiciones de pista
 
   function normalizarVelocidadObjetivo(valor: unknown) {
     const limpia = Number(valor);
@@ -144,6 +207,16 @@ export function instalarVelocidadMainWorld(): void {
     if (!medio.__scControlVelocidadRegistrada) {
       medio.__scControlVelocidadRegistrada = true;
       mediosRegistrados.add(mediaEl);
+
+      // Escucha ratechange para re-aplicar inmediatamente si un código externo
+      // (p.ej. HLS.js tras load()) resetea playbackRate fuera de nuestro setter.
+      mediaEl.addEventListener('ratechange', () => {
+        if (velocidadObjetivo === 1) return;
+        const actual = nativeGet.call(mediaEl);
+        if (Math.abs(actual - velocidadObjetivo) > 0.001) {
+          aplicarVelocidadReal(mediaEl);
+        }
+      });
     }
 
     aplicarVelocidadReal(mediaEl);
@@ -317,75 +390,6 @@ export function instalarVelocidadMainWorld(): void {
       }
     },
   });
-
-  // ── Override del setter de `volume` ─────────────────────────────────────────
-  // SC guarda el volumen global en `J` (su módulo webpack). Cuando algo dispara
-  // _updateVolume() (seek, stall, nueva pista) aplica audio.volume = J desde la
-  // MAIN world. Desde el content script aislado no podemos evitarlo. Hacemos lo
-  // mismo que con playbackRate: interceptar el setter aquí en la MAIN world y
-  // mantener el volumen objetivo durante un período tras el comando de la extensión.
-
-  const descriptorVolumen = Object.getOwnPropertyDescriptor(
-    HTMLMediaElement.prototype,
-    'volume',
-  );
-
-  if (descriptorVolumen?.get && descriptorVolumen?.set) {
-    const nativeVolGet = descriptorVolumen.get;
-    const nativeVolSet = descriptorVolumen.set;
-
-    function aplicarVolumenReal(mediaEl: HTMLMediaElement, vol = volumenObjetivo) {
-      if (vol < 0) return;
-      try {
-        nativeVolSet.call(mediaEl, vol);
-      } catch {
-        // noop
-      }
-    }
-
-    function aplicarVolumenATodos() {
-      if (volumenObjetivo < 0) return;
-      explorarDocumento();
-      mediosRegistrados.forEach((m) => aplicarVolumenReal(m));
-    }
-
-    Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
-      configurable: true,
-      enumerable: true,
-      get(this: HTMLMediaElement) {
-        return nativeVolGet.call(this);
-      },
-      set(this: HTMLMediaElement, valor: number) {
-        // Si la extensión tiene un bloqueo activo y SC intenta resetear a un valor
-        // diferente, forzamos el objetivo. El bloqueo expira tras DURACION_BLOQUEO_VOLUMEN_MS
-        // desde el último comando, lo que cubre transiciones de pista y stalls.
-        if (
-          volumenObjetivo >= 0 &&
-          Date.now() < volumenBloqueadoHasta &&
-          Math.abs(Number(valor) - volumenObjetivo) > 0.005
-        ) {
-          nativeVolSet.call(this, volumenObjetivo);
-          return;
-        }
-        nativeVolSet.call(this, valor);
-      },
-    });
-
-    window.addEventListener('message', (evento: MessageEvent) => {
-      if (evento.source !== window) return;
-
-      const data = evento.data as Partial<SolicitudVolumen> | null;
-
-      if (!data || data.canal !== CANAL_VOLUMEN) return;
-
-      if (data.tipo === 'set-volumen' && typeof data.volumen === 'number') {
-        const vol = Math.max(0, Math.min(1, data.volumen));
-        volumenObjetivo = vol;
-        volumenBloqueadoHasta = Date.now() + DURACION_BLOQUEO_VOLUMEN_MS;
-        aplicarVolumenATodos();
-      }
-    });
-  }
 
   window.addEventListener('message', (evento: MessageEvent) => {
     if (evento.source !== window) {

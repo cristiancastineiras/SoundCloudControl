@@ -76,7 +76,7 @@ const SELECTORES = {
 
 export default defineContentScript({
   matches: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
-  runAt: 'document_end',
+  runAt: 'document_start',
   main() {
     console.log('[CS] content script cargado en:', location.href);
 
@@ -510,8 +510,14 @@ function obtenerEstadoVolumenDesdeAudio(audioPrincipal: HTMLAudioElement | null)
  * Estructura del DOM de SC:
  *   <div class="volume [muted|expanded]" data-level="0-10">
  *     <div class="volume__sliderWrapper" aria-valuenow="0-1">
+ *       <div class="volume__sliderBackground">  ← 120 px de alto (CSS fijo)
  *       <div class="volume__sliderProgress" style="height: Xpx">
  *       <div class="volume__sliderHandle"   style="top: Xpx">
+ *
+ * Fórmulas extraídas de updateSlider() en el bundle original de SC:
+ *   progress.height  = sliderHeight * volume
+ *   handle.top       = sliderHeight + 10 - sliderHeight * volume
+ *   data-level       = Math.ceil(10 * volume)   (donde volume ∈ [0,1])
  */
 function mutarDomVolumen(
   contenedorVolumen: HTMLElement | null,
@@ -521,8 +527,8 @@ function mutarDomVolumen(
   const fraccion = volumen / 100;
 
   if (contenedorVolumen) {
-    // data-level: SoundCloud usa 0-10 para el icono del altavoz
-    contenedorVolumen.setAttribute('data-level', String(Math.round(volumen / 10)));
+    // SC usa Math.ceil(10 * fraccion) — no Math.round — para el icono del altavoz
+    contenedorVolumen.setAttribute('data-level', String(Math.ceil(volumen / 10)));
     // Clases: "muted" cuando silenciado, "expanded" cuando hay volumen
     // ("expanded" es también el estado hover, SC lo retira solo al salir el ratón)
     contenedorVolumen.classList.remove('muted', 'expanded');
@@ -533,17 +539,20 @@ function mutarDomVolumen(
     // aria-valuenow en escala 0-1 (aria-valuemin="0" aria-valuemax="1" en SC)
     sliderVolumen.setAttribute('aria-valuenow', String(fraccion));
 
-    // offsetHeight funciona en tabs en segundo plano (a diferencia de
-    // getBoundingClientRect que devuelve 0 para elementos no visibles)
-    const altoTotal = sliderVolumen.offsetHeight || 130;
+    // SC usa sliderBackground.height() (el elemento interno, ~120 px CSS),
+    // NO el offsetHeight del wrapper que incluye el hueco del handle y bottom:13px.
+    // offsetHeight funciona en tabs en segundo plano.
+    const fondoSlider = sliderVolumen.querySelector<HTMLElement>('.volume__sliderBackground');
+    const altoSlider = fondoSlider?.offsetHeight || 120;
     const progress = sliderVolumen.querySelector<HTMLElement>('.volume__sliderProgress');
     const handle = sliderVolumen.querySelector<HTMLElement>('.volume__sliderHandle');
 
     if (progress) {
-      progress.style.height = `${Math.round(fraccion * altoTotal)}px`;
+      progress.style.height = `${Math.round(fraccion * altoSlider)}px`;
     }
     if (handle) {
-      handle.style.top = `${Math.round((1 - fraccion) * altoTotal)}px`;
+      // Fórmula SC: top = sliderHeight + 10 - sliderHeight * volume
+      handle.style.top = `${Math.round(altoSlider * (1 - fraccion) + 10)}px`;
     }
   }
 }
@@ -568,17 +577,26 @@ async function sincronizarUiVolumen(volumen: number) {
   mutarDomVolumen(contenedorVolumen, sliderVolumen, volumen);
 
   // Ruta secundaria: si el slider es visible (hover activo, tab en primer plano),
-  // enviar también eventos de ratón para que React de SC detecte el cambio.
+  // enviar también eventos de ratón para que SC actualice su modelo interno de volumen.
+  // IMPORTANTE: las coordenadas deben calcularse en base a .volume__sliderBackground,
+  // ya que SC usa background.offset().top en _percentFromMouseCoords(), no el wrapper.
   if (sliderVolumen && esControlVolumenVisible(sliderVolumen)) {
-    const rectangulo = sliderVolumen.getBoundingClientRect();
     const proporcion = volumen / 100;
-    const margen = Math.min(6, rectangulo.height / 10);
-    const altoUtil = Math.max(1, rectangulo.height - margen * 2);
-    const clientX = rectangulo.left + rectangulo.width / 2;
+    const rectWrapper = sliderVolumen.getBoundingClientRect();
+    const fondoSlider = sliderVolumen.querySelector<HTMLElement>('.volume__sliderBackground');
+    const rectFondo = fondoSlider?.getBoundingClientRect();
+    const altoFondo = fondoSlider?.offsetHeight || 120;
+
+    // Fórmula inversa de _percentFromMouseCoords:
+    //   t = (pageY - background.offset().top - 4) / sliderHeight
+    //   volume = 1 - t  →  pageY = background.top + 4 + (1 - volume) * sliderHeight
+    //   clientY = pageY - scrollY = background.top_client + 4 + (1 - volume) * sliderHeight
+    const topFondo = rectFondo?.top ?? (rectWrapper.top + 10);
+    const clientX = rectWrapper.left + rectWrapper.width / 2;
     const clientY = limitarNumero(
-      rectangulo.bottom - margen - altoUtil * proporcion,
-      rectangulo.top + margen,
-      rectangulo.bottom - margen,
+      topFondo + 4 + (1 - proporcion) * altoFondo,
+      rectWrapper.top,
+      rectWrapper.bottom,
     );
 
     sliderVolumen.focus({ preventScroll: true });

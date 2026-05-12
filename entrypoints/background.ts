@@ -224,6 +224,30 @@ async function ajustarVolumenDesdePopup(volumen: number): Promise<RespuestaPopup
       'Abre SoundCloud para poder ajustar el volumen.',
     );
   }
+
+  // Chrome congela el world aislado en pestañas en segundo plano, lo que hace
+  // que el postMessage isolated→MAIN no se procese hasta que la pestaña quede
+  // activa. Aplicamos el volumen también directamente en el MAIN world desde
+  // aquí (background) usando scripting.executeScript, que sí llega en background.
+  const fraccion = Math.max(0, Math.min(1, volumen / 100));
+  void browser.scripting.executeScript({
+    target: { tabId: pestana.id },
+    world: 'MAIN',
+    func: (vol: number) => {
+      const audios = Array.from(document.querySelectorAll<HTMLAudioElement>('audio'));
+      for (const a of audios) {
+        try { a.volume = vol; } catch { /* noop */ }
+        try { a.muted = vol === 0; } catch { /* noop */ }
+      }
+      // También avisar al override del setter para que bloquee resets de SC
+      window.postMessage(
+        { canal: 'sc-control.volumen', tipo: 'set-volumen', volumen: vol },
+        '*',
+      );
+    },
+    args: [fraccion],
+  }).catch(() => { /* best-effort */ });
+
   try {
     const cancion = await enviarSolicitudContenido<EstadoCancion | null>(pestana.id, {
       canal: 'soundcloud-control',
@@ -259,6 +283,28 @@ async function ajustarVelocidadDesdePopup(velocidad: number): Promise<RespuestaP
       'Abre SoundCloud para poder ajustar la velocidad.',
     );
   }
+
+  // Mismo problema que el volumen: en Chrome el world aislado está suspendido
+  // en background, por lo que el postMessage para velocidad puede no llegar.
+  // Lo aplicamos también directamente en MAIN world desde el background.
+  const vel = Math.max(0.25, Math.min(4, velocidad));
+  void browser.scripting.executeScript({
+    target: { tabId: pestana.id },
+    world: 'MAIN',
+    func: (v: number) => {
+      const audios = Array.from(document.querySelectorAll<HTMLAudioElement>('audio'));
+      for (const a of audios) {
+        try { a.playbackRate = v; } catch { /* noop */ }
+      }
+      // Avisar al override del prototipo para que mantenga la velocidad objetivo
+      window.postMessage(
+        { canal: 'sc-control.velocidad', tipo: 'set-velocidad', velocidad: v },
+        '*',
+      );
+    },
+    args: [vel],
+  }).catch(() => { /* best-effort */ });
+
   try {
     const cancion = await enviarSolicitudContenido<EstadoCancion | null>(pestana.id, {
       canal: 'soundcloud-control',

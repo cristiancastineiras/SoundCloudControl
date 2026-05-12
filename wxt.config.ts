@@ -66,7 +66,7 @@ export default defineConfig({
           content_scripts: [
             {
               matches: ['*://soundcloud.com/*', '*://*.soundcloud.com/*'],
-              run_at: 'document_end',
+              run_at: 'document_start',
               js: ['equalizer-main.js'],
               world: 'MAIN',
             } as never,
@@ -86,14 +86,12 @@ export default defineConfig({
       },
     },
     plugins: [
-      preact({
-        prefreshEnabled: env.mode === 'development',
-      }),
+      preact(),
       tailwindcss(),
     ],
     build: {
       target: 'esnext',
-      modulePreload: { polyfill: false },
+      modulePreload: { polyfill: true },
       minify: 'terser',
       terserOptions: {
         compress: {
